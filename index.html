@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>5S Trainer – Simple SharePoint Game</title>
+  <style>
+    :root{
+      --bg:#0b1220;--panel:#0e1628;--panel2:#141f36;--ink:#eaf2ff;--muted:#9bb0d0;--accent:#38bdf8;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;
+      --shadow:0 8px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;background:radial-gradient(1200px 800px at 10% -10%,#11213d,transparent),
+      radial-gradient(1200px 900px at 110% 10%,#0d2a3a,transparent),linear-gradient(#0b1220,#0b1220);
+      color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
+    }
+    .app{max-width:1100px;margin:0 auto;padding:20px}
+    header{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .title{font-size:clamp(22px,3vw,28px);font-weight:700;letter-spacing:.2px}
+    .small{color:var(--muted);font-size:13px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);
+      border-radius:var(--radius);box-shadow:var(--shadow)}
+    .bar{height:14px;background:#0b1a2c;border-radius:999px;border:1px solid rgba(255,255,255,.08);overflow:hidden}
+    .bar>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#60d7a9);transition:width .4s ease}
+    .row{display:grid;gap:14px}
+    @media(min-width:900px){.row{grid-template-columns:1.2fr .8fr}}
+    .panel{padding:16px}
+    .step-title{font-weight:700;margin:0 0 6px;font-size:18px}
+    .hint{color:var(--muted);font-size:14px;margin:0 0 10px}
+    .zones{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .zone{min-height:120px;padding:10px;border:2px dashed rgba(255,255,255,.18);border-radius:12px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
+    .zone[data-type="keep"]{background:rgba(34,197,94,.08)}
+    .zone[data-type="red"]{background:rgba(245,158,11,.10)}
+    .zone[data-type="bin"]{background:rgba(239,68,68,.10)}
+    .zone h4{margin:0 0 6px 0;width:100%;font-size:14px;color:var(--muted)}
+
+    .items{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{user-select:none;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.03);cursor:grab;font-size:14px}
+    .chip[aria-grabbed="true"]{outline:2px solid var(--accent)}
+    .chip.locked{opacity:.65;cursor:default}
+    .chip.bad{animation:shake .25s linear}
+    @keyframes shake{25%{transform:translateX(-2px)}50%{transform:translateX(2px)}75%{transform:translateX(-2px)}}
+
+    .so-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .slot,.so-item{border-radius:12px;border:1px dashed rgba(255,255,255,.18);padding:10px;min-height:64px;display:flex;align-items:center;justify-content:center}
+    .slot{background:rgba(56,189,248,.06);color:var(--muted)}
+    .so-item{background:rgba(255,255,255,.04);cursor:grab}
+
+    .bench{position:relative;height:220px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,#1b2740,#16223c);overflow:hidden}
+    .spot{position:absolute;width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(0,0,0,.45),rgba(0,0,0,.15));cursor:pointer;transition:transform .14s ease,opacity .14s ease}
+    .spot.clean{transform:scale(0);opacity:0}
+
+    .checklist{display:grid;gap:8px}
+    .check{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+    .check input{width:18px;height:18px}
+
+    .sustain{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    select,button,.btn{
+      appearance:none;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);
+      color:var(--ink);padding:10px 12px;cursor:pointer;font-weight:600
+    }
+    button.primary{background:linear-gradient(180deg,#33b8ff,#2aa5f0);border-color:rgba(255,255,255,.18);color:#04131f}
+    .footer{display:flex;gap:8px;flex-wrap:wrap}
+    .tag{font-size:12px;color:var(--muted)}
+    .right{display:grid;gap:14px}
+    .stat{padding:12px}
+    .big{font-size:28px;font-weight:800}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <div class="title">5S Trainer</div>
+        <div class="small">Sort • Set in Order • Shine • Standardise • Sustain</div>
+      </div>
+      <div style="flex:1;max-width:440px">
+        <div class="small" id="progressLabel">Progress 0%</div>
+        <div class="bar" aria-label="overall progress"><span id="bar"></span></div>
+      </div>
+      <div class="footer">
+        <button id="reset">Reset progress</button>
+      </div>
+    </header>
+
+    <div class="row">
+      <section class="card panel" id="stage">
+        <h2 class="step-title" id="stepTitle">Step 1 of 5 · Sort</h2>
+        <p class="hint" id="hint">Move each item to the right place. Keep, Red Tag, or Bin.</p>
+        <div id="content"></div>
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+          <button id="backBtn" style="display:none">Back</button>
+          <button id="nextBtn" class="primary" disabled>Next</button>
+        </div>
+      </section>
+
+      <aside class="right">
+        <div class="card stat">
+          <div class="small">Step</div>
+          <div class="big" id="stepStat">1 / 5</div>
+        </div>
+        <div class="card stat">
+          <div class="small">Score</div>
+          <div class="big" id="score">0</div>
+        </div>
+        <div class="card stat">
+          <div class="small">Tips</div>
+          <ul class="small" style="margin:6px 0 0 18px;line-height:1.3">
+            <li>Use Red Tags for items that need a decision</li>
+            <li>Everything you keep must have a clear home</li>
+            <li>Clean as you go and make it easy to keep clean</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+
+    <p class="tag">Your progress is saved locally in this browser.</p>
+  </div>
+
+<script>
+(function(){
+  const state = {
+    step: 1, // 1..5
+    score: 0,
+    done: {1:false,2:false,3:false,4:false,5:false}
+  };
+
+  const storageKey = 'fiveS_trainer_progress_v1';
+  const saved = localStorage.getItem(storageKey);
+  if(saved){
+    try{const s=JSON.parse(saved);Object.assign(state,s)}catch(e){}
+  }
+
+  const $ = sel => document.querySelector(sel);
+  const content = $('#content');
+  const stepTitle = $('#stepTitle');
+  const hint = $('#hint');
+  const bar = $('#bar');
+  const progressLabel = $('#progressLabel');
+  const scoreEl = $('#score');
+  const stepStat = $('#stepStat');
+  const nextBtn = $('#nextBtn');
+  const backBtn = $('#backBtn');
+
+  $('#reset').addEventListener('click',()=>{
+    localStorage.removeItem(storageKey);
+    state.step=1;state.score=0;state.done={1:false,2:false,3:false,4:false,5:false};
+    render();
+  });
+
+  nextBtn.addEventListener('click',()=>{
+    if(state.step<5){state.step++;render();}
+  });
+  backBtn.addEventListener('click',()=>{
+    if(state.step>1){state.step--;render();}
+  });
+
+  function save(){localStorage.setItem(storageKey,JSON.stringify(state));}
+
+  function updateHud(){
+    const pct = Math.round(((Object.values(state.done).filter(Boolean).length)/5)*100);
+    bar.style.width = pct+'%';
+    progressLabel.textContent = 'Progress ' + pct + '%';
+    scoreEl.textContent = state.score;
+    stepStat.textContent = state.step + ' / 5';
+    backBtn.style.display = state.step>1 ? 'inline-flex' : 'none';
+  }
+
+  function clearContent(){content.innerHTML=''; nextBtn.disabled = !state.done[state.step];}
+
+  // Step 1: Sort
+  function step1(){
+    stepTitle.textContent = 'Step 1 of 5 · Sort';
+    hint.textContent = 'Move each item to the right place. Keep, Red Tag, or Bin.';
+    clearContent();
+
+    const items = [
+      {id:'calipers',label:'Digital calipers',cat:'keep'},
+      {id:'torque',label:'Torque wrench',cat:'keep'},
+      {id:'labels',label:'Label maker',cat:'keep'},
+      {id:'adhesive',label:'Expired adhesive',cat:'bin'},
+      {id:'bolt',label:'Broken bolt',cat:'bin'},
+      {id:'gasket',label:'Cracked gasket',cat:'bin'},
+      {id:'dup-screw',label:'Duplicate screwdriver',cat:'red'},
+      {id:'unknown-jig',label:'Unknown jig',cat:'red'},
+      {id:'unassigned',label:'Unassigned spare parts',cat:'red'}
+    ];
+
+    const wrap = document.createElement('div');
+    wrap.className='items';
+    wrap.setAttribute('aria-label','Items to sort');
+
+    items.forEach(it=>{
+      const el = document.createElement('div');
+      el.className='chip'; el.textContent=it.label; el.draggable=true; el.id='it-'+it.id;
+      el.dataset.cat=it.cat; el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-grabbed','false');
+      el.addEventListener('dragstart',ev=>{ev.dataTransfer.setData('text/plain',el.id); el.setAttribute('aria-grabbed','true');});
+      el.addEventListener('dragend',()=>el.setAttribute('aria-grabbed','false'));
+      // click-to-place fallback
+      el.addEventListener('click',()=>{selected=el; [...document.querySelectorAll('.zone')].forEach(z=>z.style.outline='2px solid rgba(56,189,248,.5)');});
+      wrap.appendChild(el);
+    });
+
+    // Zones
+    const zones = document.createElement('div'); zones.className='zones';
+    const cats=[
+      {type:'keep',label:'Keep'},
+      {type:'red',label:'Red Tag'},
+      {type:'bin',label:'Bin'}
+    ];
+    let placed=0; let selected=null;
+
+    cats.forEach(c=>{
+      const z = document.createElement('div'); z.className='zone'; z.dataset.type=c.type; z.innerHTML = `<h4>${c.label}</h4>`;
+      z.addEventListener('dragover',ev=>ev.preventDefault());
+      z.addEventListener('drop',ev=>{ev.preventDefault(); const id=ev.dataTransfer.getData('text/plain'); tryPlace(document.getElementById(id),z)});
+      z.addEventListener('click',()=>{ if(selected) { tryPlace(selected,z); selected=null; [...document.querySelectorAll('.zone')].forEach(x=>x.style.outline='none'); }});
+      zones.appendChild(z);
+    });
+
+    function tryPlace(el,zone){
+      if(!el || el.classList.contains('locked')) return;
+      const correct = el.dataset.cat === zone.dataset.type;
+      if(correct){
+        zone.appendChild(el); el.classList.add('locked'); el.setAttribute('aria-grabbed','false'); el.draggable=false; placed++; state.score+=5; save(); updateHud();
+        if(placed===items.length){ state.done[1]=true; nextBtn.disabled=false; save(); }
+      } else {
+        el.classList.add('bad'); setTimeout(()=>el.classList.remove('bad'),200);
+      }
+    }
+
+    const layout = document.createElement('div');
+    layout.style.display='grid'; layout.style.gap='12px';
+    layout.appendChild(wrap); layout.appendChild(zones);
+    content.appendChild(layout);
+  }
+
+  // Step 2: Set in Order
+  function step2(){
+    stepTitle.textContent = 'Step 2 of 5 · Set in Order';
+    hint.textContent = 'Place each tool into its labelled home.';
+    clearContent();
+
+    const names = [
+      {id:'calipers',label:'Digital calipers'},
+      {id:'torque',label:'Torque wrench'},
+      {id:'labels',label:'Label maker'}
+    ];
+
+    const so = document.createElement('div'); so.className='so-grid';
+    const deck = document.createElement('div'); deck.className='so-grid';
+
+    names.forEach(n=>{
+      const slot = document.createElement('div'); slot.className='slot'; slot.dataset.accept=n.id; slot.textContent=n.label + ' home';
+      slot.addEventListener('dragover',ev=>ev.preventDefault());
+      slot.addEventListener('drop',ev=>{ev.preventDefault(); const id=ev.dataTransfer.getData('text/plain'); placeSO(document.getElementById(id),slot)});
+      so.appendChild(slot);
+    });
+
+    names.sort(()=>Math.random()-0.5).forEach(n=>{
+      const item = document.createElement('div'); item.className='so-item'; item.id='so-'+n.id; item.textContent=n.label; item.draggable=true;
+      item.dataset.id=n.id;
+      item.addEventListener('dragstart',ev=>ev.dataTransfer.setData('text/plain',item.id));
+      deck.appendChild(item);
+    });
+
+    let placed=0;
+    function placeSO(el,slot){
+      if(!el || slot.dataset.accept!==el.dataset.id) { el?.classList.add('bad'); setTimeout(()=>el?.classList.remove('bad'),200); return; }
+      slot.innerHTML='✅ '+slot.textContent.replace(' home',''); slot.appendChild(el); el.draggable=false; el.style.opacity=.7; placed++; state.score+=5; save(); updateHud();
+      if(placed===names.length){ state.done[2]=true; nextBtn.disabled=false; save(); }
+    }
+
+    const wrap = document.createElement('div');
+    wrap.style.display='grid'; wrap.style.gap='12px';
+    wrap.appendChild(deck); wrap.appendChild(so);
+    content.appendChild(wrap);
+  }
+
+  // Step 3: Shine
+  function step3(){
+    stepTitle.textContent = 'Step 3 of 5 · Shine';
+    hint.textContent = 'Click the dirt spots to clean the bench.';
+    clearContent();
+
+    const bench = document.createElement('div'); bench.className='bench';
+    const spots=12; let cleaned=0;
+    for(let i=0;i<spots;i++){
+      const s=document.createElement('div'); s.className='spot'; s.style.left=Math.random()*92+2+'%'; s.style.top=Math.random()*80+8+'%';
+      s.addEventListener('click',()=>{ if(!s.classList.contains('clean')){ s.classList.add('clean'); cleaned++; state.score+=2; save(); updateHud(); if(cleaned===spots){ state.done[3]=true; nextBtn.disabled=false; save(); }} });
+      bench.appendChild(s);
+    }
+    content.appendChild(bench);
+  }
+
+  // Step 4: Standardise
+  function step4(){
+    stepTitle.textContent = 'Step 4 of 5 · Standardise';
+    hint.textContent = 'Tick the actions you have put in place.';
+    clearContent();
+
+    const list=[
+      'Tool board labels match names',
+      'Floor outlines and colour coding applied',
+      'Cleaning checklist posted at the area',
+      'Spare parts list created and stored',
+      'Photo of tidy state printed for reference'
+    ];
+
+    const wrap=document.createElement('div'); wrap.className='checklist'; let checked=0;
+    list.forEach((txt,i)=>{
+      const row=document.createElement('label'); row.className='check';
+      const cb=document.createElement('input'); cb.type='checkbox'; cb.addEventListener('change',()=>{
+        checked += cb.checked?1:-1; state.score += cb.checked?3:-3; save(); updateHud(); if(checked===list.length){ state.done[4]=true; nextBtn.disabled=false; save(); }
+      });
+      row.appendChild(cb); const span=document.createElement('span'); span.textContent=txt; row.appendChild(span); wrap.appendChild(row);
+    });
+    content.appendChild(wrap);
+  }
+
+  // Step 5: Sustain
+  function step5(){
+    stepTitle.textContent = 'Step 5 of 5 · Sustain';
+    hint.textContent = 'Choose an audit frequency and confirm to finish.';
+    clearContent();
+
+    const box=document.createElement('div'); box.className='sustain';
+    const sel=document.createElement('select'); sel.innerHTML=`
+      <option value="" disabled selected>Select frequency</option>
+      <option>Weekly</option>
+      <option>Fortnightly</option>
+      <option>Monthly</option>
+    `;
+    const btn=document.createElement('button'); btn.className='primary'; btn.textContent='Confirm schedule'; btn.disabled=true;
+    sel.addEventListener('change',()=>{btn.disabled=!sel.value});
+    btn.addEventListener('click',()=>{ state.done[5]=true; state.score+=10; save(); updateHud(); btn.textContent='Saved'; btn.disabled=true; alert('Nice work. You completed all 5S steps.'); });
+    box.appendChild(sel); box.appendChild(btn);
+
+    const doneMsg=document.createElement('p'); doneMsg.className='hint'; doneMsg.textContent='Tip: Put a short audit on your team calendar so it actually happens.';
+
+    content.appendChild(box); content.appendChild(doneMsg);
+  }
+
+  function render(){
+    save(); updateHud(); nextBtn.disabled=!state.done[state.step];
+    switch(state.step){
+      case 1: step1(); break;
+      case 2: step2(); break;
+      case 3: step3(); break;
+      case 4: step4(); break;
+      case 5: step5(); break;
+    }
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
