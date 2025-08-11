@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>5S Trainer – Simple SharePoint Game</title>
+  <title>5S Trainer – JS version with penalties & animations</title>
   <style>
     :root{
       --bg:#0b1220;--panel:#0e1628;--panel2:#141f36;--ink:#eaf2ff;--muted:#9bb0d0;--accent:#38bdf8;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;
@@ -16,6 +16,7 @@
       margin:0;background:radial-gradient(1200px 800px at 10% -10%,#11213d,transparent),
       radial-gradient(1200px 900px at 110% 10%,#0d2a3a,transparent),linear-gradient(#0b1220,#0b1220);
       color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
+      overflow-x:hidden;
     }
     .app{max-width:1100px;margin:0 auto;padding:20px}
     header{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -31,7 +32,7 @@
     .step-title{font-weight:700;margin:0 0 6px;font-size:18px}
     .hint{color:var(--muted);font-size:14px;margin:0 0 10px}
     .zones{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    .zone{min-height:120px;padding:10px;border:2px dashed rgba(255,255,255,.18);border-radius:12px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
+    .zone{min-height:120px;padding:10px;border:2px dashed rgba(255,255,255,.18);border-radius:12px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;position:relative}
     .zone[data-type="keep"]{background:rgba(34,197,94,.08)}
     .zone[data-type="red"]{background:rgba(245,158,11,.10)}
     .zone[data-type="bin"]{background:rgba(239,68,68,.10)}
@@ -39,15 +40,17 @@
 
     .items{display:flex;flex-wrap:wrap;gap:8px}
     .chip{user-select:none;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.03);cursor:grab;font-size:14px}
+      background:rgba(255,255,255,.03);cursor:grab;font-size:14px;position:relative}
     .chip[aria-grabbed="true"]{outline:2px solid var(--accent)}
-    .chip.locked{opacity:.65;cursor:default}
+    .chip.locked{opacity:.75;cursor:default}
     .chip.bad{animation:shake .25s linear}
     @keyframes shake{25%{transform:translateX(-2px)}50%{transform:translateX(2px)}75%{transform:translateX(-2px)}}
 
     .so-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    .slot,.so-item{border-radius:12px;border:1px dashed rgba(255,255,255,.18);padding:10px;min-height:64px;display:flex;align-items:center;justify-content:center}
+    .slot,.so-item{border-radius:12px;border:1px dashed rgba(255,255,255,.18);padding:10px;min-height:64px;display:flex;align-items:center;justify-content:center;position:relative}
     .slot{background:rgba(56,189,248,.06);color:var(--muted)}
+    .slot.flash{animation:flash .5s ease}
+    @keyframes flash{0%{box-shadow:0 0 0 0 rgba(34,197,94,.0)}30%{box-shadow:0 0 0 8px rgba(34,197,94,.25)}100%{box-shadow:0 0 0 0 rgba(34,197,94,.0)}}
     .so-item{background:rgba(255,255,255,.04);cursor:grab}
 
     .bench{position:relative;height:220px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,#1b2740,#16223c);overflow:hidden}
@@ -69,6 +72,17 @@
     .right{display:grid;gap:14px}
     .stat{padding:12px}
     .big{font-size:28px;font-weight:800}
+
+    /* Floating score labels */
+    .float-msg{position:fixed;pointer-events:none;z-index:1000;font-weight:800}
+    .float-plus{color:#7cf59a;animation:rise .9s ease forwards}
+    .float-minus{color:#ff7a7a;animation:fall .9s ease forwards}
+    @keyframes rise{0%{transform:translate(-50%,0) scale(.9);opacity:0}10%{opacity:1}100%{transform:translate(-50%,-60px) scale(1);opacity:0}}
+    @keyframes fall{0%{transform:translate(-50%,0) scale(.9);opacity:0}10%{opacity:1}100%{transform:translate(-50%,40px) scale(1);opacity:0}}
+
+    /* Confetti pieces */
+    .confetti{position:fixed;width:8px;height:12px;border-radius:2px;opacity:.95;animation:confetti 900ms ease-out forwards}
+    @keyframes confetti{0%{transform:translate(0,0) rotate(0)}100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
   </style>
 </head>
 <body>
@@ -90,7 +104,7 @@
     <div class="row">
       <section class="card panel" id="stage">
         <h2 class="step-title" id="stepTitle">Step 1 of 5 · Sort</h2>
-        <p class="hint" id="hint">Move each item to the right place. Keep, Red Tag, or Bin.</p>
+        <p class="hint" id="hint">Move each item to the right place. Keep, Red Tag, or Bin. Wrong moves cost points.</p>
         <div id="content"></div>
         <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
           <button id="backBtn" style="display:none">Back</button>
@@ -106,6 +120,10 @@
         <div class="card stat">
           <div class="small">Score</div>
           <div class="big" id="score">0</div>
+        </div>
+        <div class="card stat">
+          <div class="small">Mistakes</div>
+          <div class="big" id="mistakes">0</div>
         </div>
         <div class="card stat">
           <div class="small">Tips</div>
@@ -126,10 +144,11 @@
   const state = {
     step: 1, // 1..5
     score: 0,
+    mistakes: 0,
     done: {1:false,2:false,3:false,4:false,5:false}
   };
 
-  const storageKey = 'fiveS_trainer_progress_v1';
+  const storageKey = 'fiveS_trainer_progress_v2';
   const saved = localStorage.getItem(storageKey);
   if(saved){
     try{const s=JSON.parse(saved);Object.assign(state,s)}catch(e){}
@@ -142,13 +161,14 @@
   const bar = $('#bar');
   const progressLabel = $('#progressLabel');
   const scoreEl = $('#score');
+  const mistakesEl = $('#mistakes');
   const stepStat = $('#stepStat');
   const nextBtn = $('#nextBtn');
   const backBtn = $('#backBtn');
 
   $('#reset').addEventListener('click',()=>{
     localStorage.removeItem(storageKey);
-    state.step=1;state.score=0;state.done={1:false,2:false,3:false,4:false,5:false};
+    state.step=1;state.score=0;state.mistakes=0;state.done={1:false,2:false,3:false,4:false,5:false};
     render();
   });
 
@@ -161,11 +181,59 @@
 
   function save(){localStorage.setItem(storageKey,JSON.stringify(state));}
 
+  function floatMsg(txt, x, y, positive=true){
+    const el = document.createElement('div');
+    el.className = 'float-msg ' + (positive? 'float-plus':'float-minus');
+    el.textContent = txt;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(), 950);
+  }
+
+  function confetti(x,y){
+    const count = 24;
+    for(let i=0;i<count;i++){
+      const c = document.createElement('div');
+      c.className='confetti';
+      const dx = (Math.random()*200-100) + 'px';
+      const dy = (Math.random()*-160-40) + 'px';
+      const rot = (Math.random()*720-360) + 'deg';
+      c.style.left = x + 'px'; c.style.top = y + 'px';
+      c.style.setProperty('--dx', dx);
+      c.style.setProperty('--dy', dy);
+      c.style.setProperty('--rot', rot);
+      c.style.background = `hsl(${Math.floor(Math.random()*360)},85%,65%)`;
+      document.body.appendChild(c);
+      setTimeout(()=>c.remove(), 920);
+    }
+  }
+
+  function addScore(amount, anchor){
+    const rect = anchor.getBoundingClientRect();
+    const x = rect.left + rect.width/2; const y = rect.top;
+    if(amount>0){floatMsg('+'+amount, x, y, true);} else {floatMsg(amount, x, y, false);}    
+    state.score = Math.max(0, state.score + amount);
+    save(); updateHud();
+  }
+
+  function wrong(anchor){
+    state.mistakes += 1; addScore(-2, anchor);
+    anchor.classList.add('bad');
+    setTimeout(()=>anchor.classList.remove('bad'),220);
+  }
+
+  function celebrate(anchor){
+    const rect = anchor.getBoundingClientRect();
+    confetti(rect.left + rect.width/2, rect.top + rect.height/2);
+  }
+
   function updateHud(){
     const pct = Math.round(((Object.values(state.done).filter(Boolean).length)/5)*100);
     bar.style.width = pct+'%';
     progressLabel.textContent = 'Progress ' + pct + '%';
     scoreEl.textContent = state.score;
+    mistakesEl.textContent = state.mistakes;
     stepStat.textContent = state.step + ' / 5';
     backBtn.style.display = state.step>1 ? 'inline-flex' : 'none';
   }
@@ -175,11 +243,11 @@
   // Step 1: Sort
   function step1(){
     stepTitle.textContent = 'Step 1 of 5 · Sort';
-    hint.textContent = 'Move each item to the right place. Keep, Red Tag, or Bin.';
+    hint.textContent = 'Move each item to the right place. Keep, Red Tag, or Bin. Wrong moves cost points.';
     clearContent();
 
     const items = [
-      {id:'calipers',label:'Digital calipers',cat:'keep'},
+      {id:'megger',label:'Megger insulation tester',cat:'keep'},
       {id:'torque',label:'Torque wrench',cat:'keep'},
       {id:'labels',label:'Label maker',cat:'keep'},
       {id:'adhesive',label:'Expired adhesive',cat:'bin'},
@@ -226,12 +294,15 @@
       if(!el || el.classList.contains('locked')) return;
       const correct = el.dataset.cat === zone.dataset.type;
       if(correct){
-        zone.appendChild(el); el.classList.add('locked'); el.setAttribute('aria-grabbed','false'); el.draggable=false; placed++; state.score+=5; save(); updateHud();
+        zone.appendChild(el); el.classList.add('locked'); el.setAttribute('aria-grabbed','false'); el.draggable=false; placed++; addScore(+5, el); celebrate(zone); save(); updateHud();
+        zFlash(zone);
         if(placed===items.length){ state.done[1]=true; nextBtn.disabled=false; save(); }
       } else {
-        el.classList.add('bad'); setTimeout(()=>el.classList.remove('bad'),200);
+        wrong(el);
       }
     }
+
+    function zFlash(z){ z.classList.add('flash'); setTimeout(()=>z.classList.remove('flash'),500); }
 
     const layout = document.createElement('div');
     layout.style.display='grid'; layout.style.gap='12px';
@@ -242,11 +313,11 @@
   // Step 2: Set in Order
   function step2(){
     stepTitle.textContent = 'Step 2 of 5 · Set in Order';
-    hint.textContent = 'Place each tool into its labelled home.';
+    hint.textContent = 'Place each tool into its labelled home. Wrong matches cost points.';
     clearContent();
 
     const names = [
-      {id:'calipers',label:'Digital calipers'},
+      {id:'megger',label:'Megger insulation tester'},
       {id:'torque',label:'Torque wrench'},
       {id:'labels',label:'Label maker'}
     ];
@@ -254,8 +325,16 @@
     const so = document.createElement('div'); so.className='so-grid';
     const deck = document.createElement('div'); deck.className='so-grid';
 
+    const home = {
+      megger: 'Electrical test equipment drawer',
+      torque: 'Torque drawer',
+      labels: 'Consumables shelf'
+    };
+
     names.forEach(n=>{
-      const slot = document.createElement('div'); slot.className='slot'; slot.dataset.accept=n.id; slot.textContent=n.label + ' home';
+      const slot = document.createElement('div'); slot.className='slot'; slot.dataset.accept=n.id; slot.textContent=`${n.label} home`;
+      const sub=document.createElement('div'); sub.className='small'; sub.textContent=`Ideal: ${home[n.id]}`; sub.style.opacity=.65; sub.style.marginTop='6px';
+      slot.appendChild(sub);
       slot.addEventListener('dragover',ev=>ev.preventDefault());
       slot.addEventListener('drop',ev=>{ev.preventDefault(); const id=ev.dataTransfer.getData('text/plain'); placeSO(document.getElementById(id),slot)});
       so.appendChild(slot);
@@ -270,8 +349,13 @@
 
     let placed=0;
     function placeSO(el,slot){
-      if(!el || slot.dataset.accept!==el.dataset.id) { el?.classList.add('bad'); setTimeout(()=>el?.classList.remove('bad'),200); return; }
-      slot.innerHTML='✅ '+slot.textContent.replace(' home',''); slot.appendChild(el); el.draggable=false; el.style.opacity=.7; placed++; state.score+=5; save(); updateHud();
+      if(!el){return}
+      if(slot.dataset.accept!==el.dataset.id) {
+        wrong(el);
+        return;
+      }
+      slot.classList.add('flash');
+      slot.innerHTML='✅ '+slot.textContent.replace(' home',''); slot.appendChild(el); el.draggable=false; el.style.opacity=.7; placed++; addScore(+5, slot); celebrate(slot); save(); updateHud();
       if(placed===names.length){ state.done[2]=true; nextBtn.disabled=false; save(); }
     }
 
@@ -291,11 +375,13 @@
     const spots=12; let cleaned=0;
     for(let i=0;i<spots;i++){
       const s=document.createElement('div'); s.className='spot'; s.style.left=Math.random()*92+2+'%'; s.style.top=Math.random()*80+8+'%';
-      s.addEventListener('click',()=>{ if(!s.classList.contains('clean')){ s.classList.add('clean'); cleaned++; state.score+=2; save(); updateHud(); if(cleaned===spots){ state.done[3]=true; nextBtn.disabled=false; save(); }} });
+      s.addEventListener('click',()=>{ if(!s.classList.contains('clean')){ s.classList.add('clean'); cleaned++; addScore(+2, s); confettiAtEl(s); save(); updateHud(); if(cleaned===spots){ state.done[3]=true; nextBtn.disabled=false; save(); }} });
       bench.appendChild(s);
     }
     content.appendChild(bench);
   }
+
+  function confettiAtEl(el){ const r=el.getBoundingClientRect(); confetti(r.left+r.width/2, r.top+r.height/2); }
 
   // Step 4: Standardise
   function step4(){
@@ -315,7 +401,7 @@
     list.forEach((txt,i)=>{
       const row=document.createElement('label'); row.className='check';
       const cb=document.createElement('input'); cb.type='checkbox'; cb.addEventListener('change',()=>{
-        checked += cb.checked?1:-1; state.score += cb.checked?3:-3; save(); updateHud(); if(checked===list.length){ state.done[4]=true; nextBtn.disabled=false; save(); }
+        checked += cb.checked?1:-1; addScore(cb.checked?+3:-3, row); save(); updateHud(); if(checked===list.length){ state.done[4]=true; nextBtn.disabled=false; save(); }
       });
       row.appendChild(cb); const span=document.createElement('span'); span.textContent=txt; row.appendChild(span); wrap.appendChild(row);
     });
@@ -337,7 +423,7 @@
     `;
     const btn=document.createElement('button'); btn.className='primary'; btn.textContent='Confirm schedule'; btn.disabled=true;
     sel.addEventListener('change',()=>{btn.disabled=!sel.value});
-    btn.addEventListener('click',()=>{ state.done[5]=true; state.score+=10; save(); updateHud(); btn.textContent='Saved'; btn.disabled=true; alert('Nice work. You completed all 5S steps.'); });
+    btn.addEventListener('click',()=>{ state.done[5]=true; addScore(+10, btn); save(); updateHud(); btn.textContent='Saved'; btn.disabled=true; alert('Nice work. You completed all 5S steps.'); });
     box.appendChild(sel); box.appendChild(btn);
 
     const doneMsg=document.createElement('p'); doneMsg.className='hint'; doneMsg.textContent='Tip: Put a short audit on your team calendar so it actually happens.';
