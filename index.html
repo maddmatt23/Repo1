@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>5S Trainer – JS version with penalties & animations</title>
+  <title>5S Trainer – Hard Mode (3 Strikes, Anti‑Farm, Animations)</title>
   <style>
     :root{
       --bg:#0b1220;--panel:#0e1628;--panel2:#141f36;--ink:#eaf2ff;--muted:#9bb0d0;--accent:#38bdf8;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;
@@ -24,13 +24,26 @@
     .small{color:var(--muted);font-size:13px}
     .card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);
       border-radius:var(--radius);box-shadow:var(--shadow)}
-    .bar{height:14px;background:#0b1a2c;border-radius:999px;border:1px solid rgba(255,255,255,.08);overflow:hidden}
-    .bar>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#60d7a9);transition:width .4s ease}
+    .panel{padding:16px}
     .row{display:grid;gap:14px}
     @media(min-width:900px){.row{grid-template-columns:1.2fr .8fr}}
-    .panel{padding:16px}
+    .bar{height:14px;background:#0b1a2c;border-radius:999px;border:1px solid rgba(255,255,255,.08);overflow:hidden}
+    .bar>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#60d7a9);transition:width .4s ease}
+
     .step-title{font-weight:700;margin:0 0 6px;font-size:18px}
     .hint{color:var(--muted);font-size:14px;margin:0 0 10px}
+
+    /* Lives */
+    .lives{display:flex;gap:6px;align-items:center}
+    .life{width:14px;height:14px;border-radius:50%;background:#2a3a56;border:1px solid rgba(255,255,255,.2)}
+    .life.on{background:#ef4444}
+
+    /* Stats side */
+    .right{display:grid;gap:14px}
+    .stat{padding:12px}
+    .big{font-size:28px;font-weight:800}
+
+    /* Chips / zones */
     .zones{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
     .zone{min-height:120px;padding:10px;border:2px dashed rgba(255,255,255,.18);border-radius:12px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;position:relative}
     .zone[data-type="keep"]{background:rgba(34,197,94,.08)}
@@ -46,6 +59,7 @@
     .chip.bad{animation:shake .25s linear}
     @keyframes shake{25%{transform:translateX(-2px)}50%{transform:translateX(2px)}75%{transform:translateX(-2px)}}
 
+    /* Set in Order */
     .so-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
     .slot,.so-item{border-radius:12px;border:1px dashed rgba(255,255,255,.18);padding:10px;min-height:64px;display:flex;align-items:center;justify-content:center;position:relative}
     .slot{background:rgba(56,189,248,.06);color:var(--muted)}
@@ -53,34 +67,34 @@
     @keyframes flash{0%{box-shadow:0 0 0 0 rgba(34,197,94,.0)}30%{box-shadow:0 0 0 8px rgba(34,197,94,.25)}100%{box-shadow:0 0 0 0 rgba(34,197,94,.0)}}
     .so-item{background:rgba(255,255,255,.04);cursor:grab}
 
-    .bench{position:relative;height:220px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,#1b2740,#16223c);overflow:hidden}
-    .spot{position:absolute;width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(0,0,0,.45),rgba(0,0,0,.15));cursor:pointer;transition:transform .14s ease,opacity .14s ease}
+    /* Shine */
+    .bench{position:relative;height:260px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,#1b2740,#16223c);overflow:hidden}
+    .spot{position:absolute;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(0,0,0,.45),rgba(0,0,0,.15));cursor:pointer;transition:transform .14s ease,opacity .14s ease}
     .spot.clean{transform:scale(0);opacity:0}
+    .hazard{background:radial-gradient(circle at 30% 30%,rgba(255,200,0,.8),rgba(255,200,0,.3));box-shadow:0 0 0 2px rgba(255,200,0,.35) inset}
 
-    .checklist{display:grid;gap:8px}
-    .check{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
-    .check input{width:18px;height:18px}
+    /* Standardise – reorder list */
+    .order{display:grid;gap:8px}
+    .step-card{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);cursor:grab}
+    .handle{width:18px;height:18px;border-radius:4px;background:rgba(255,255,255,.08)}
 
-    .sustain{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    select,button,.btn{
-      appearance:none;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);
-      color:var(--ink);padding:10px 12px;cursor:pointer;font-weight:600
-    }
-    button.primary{background:linear-gradient(180deg,#33b8ff,#2aa5f0);border-color:rgba(255,255,255,.18);color:#04131f}
-    .footer{display:flex;gap:8px;flex-wrap:wrap}
-    .tag{font-size:12px;color:var(--muted)}
-    .right{display:grid;gap:14px}
-    .stat{padding:12px}
-    .big{font-size:28px;font-weight:800}
+    /* Buttons */
+    .btn,button{appearance:none;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--ink);padding:10px 12px;cursor:pointer;font-weight:700}
+    .primary{background:linear-gradient(180deg,#33b8ff,#2aa5f0);border-color:rgba(255,255,255,.18);color:#04131f}
 
-    /* Floating score labels */
+    /* Overlay fail */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:9999}
+    .modal{max-width:520px;padding:20px;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.1);box-shadow:var(--shadow);text-align:center}
+    .modal h3{margin:0 0 6px}
+
+    /* Float points */
     .float-msg{position:fixed;pointer-events:none;z-index:1000;font-weight:800}
     .float-plus{color:#7cf59a;animation:rise .9s ease forwards}
     .float-minus{color:#ff7a7a;animation:fall .9s ease forwards}
     @keyframes rise{0%{transform:translate(-50%,0) scale(.9);opacity:0}10%{opacity:1}100%{transform:translate(-50%,-60px) scale(1);opacity:0}}
     @keyframes fall{0%{transform:translate(-50%,0) scale(.9);opacity:0}10%{opacity:1}100%{transform:translate(-50%,40px) scale(1);opacity:0}}
 
-    /* Confetti pieces */
+    /* Confetti */
     .confetti{position:fixed;width:8px;height:12px;border-radius:2px;opacity:.95;animation:confetti 900ms ease-out forwards}
     @keyframes confetti{0%{transform:translate(0,0) rotate(0)}100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
   </style>
@@ -89,22 +103,23 @@
   <div class="app">
     <header>
       <div>
-        <div class="title">5S Trainer</div>
+        <div class="title">5S Trainer – Hard Mode</div>
         <div class="small">Sort • Set in Order • Shine • Standardise • Sustain</div>
       </div>
       <div style="flex:1;max-width:440px">
         <div class="small" id="progressLabel">Progress 0%</div>
         <div class="bar" aria-label="overall progress"><span id="bar"></span></div>
       </div>
+      <div class="lives" id="lives"></div>
       <div class="footer">
-        <button id="reset">Reset progress</button>
+        <button id="reset">Reset</button>
       </div>
     </header>
 
     <div class="row">
       <section class="card panel" id="stage">
         <h2 class="step-title" id="stepTitle">Step 1 of 5 · Sort</h2>
-        <p class="hint" id="hint">Move each item to the right place. Keep, Red Tag, or Bin. Wrong moves cost points.</p>
+        <p class="hint" id="hint">Sort correctly. 3 strikes and you start again. No replays for extra points.</p>
         <div id="content"></div>
         <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
           <button id="backBtn" style="display:none">Back</button>
@@ -128,33 +143,41 @@
         <div class="card stat">
           <div class="small">Tips</div>
           <ul class="small" style="margin:6px 0 0 18px;line-height:1.3">
-            <li>Use Red Tags for items that need a decision</li>
+            <li>Red Tag uncertain or uncalibrated items</li>
             <li>Everything you keep must have a clear home</li>
-            <li>Clean as you go and make it easy to keep clean</li>
+            <li>Clean + make it easy to keep clean</li>
           </ul>
         </div>
       </aside>
     </div>
 
-    <p class="tag">Your progress is saved locally in this browser.</p>
+    <p class="small" style="opacity:.85;margin-top:14px">Progress and lives save locally.</p>
+  </div>
+
+  <div class="overlay" id="fail" style="display:none">
+    <div class="modal">
+      <h3>Run failed</h3>
+      <p>You made 3 mistakes. Try again from the beginning.</p>
+      <button class="primary" id="restartBtn">Restart</button>
+    </div>
   </div>
 
 <script>
 (function(){
+  const MAX_STRIKES = 3;
   const state = {
-    step: 1, // 1..5
+    step: 1,
     score: 0,
     mistakes: 0,
-    done: {1:false,2:false,3:false,4:false,5:false}
+    done: {1:false,2:false,3:false,4:false,5:false},
+    locked: {1:false,2:false,3:false,4:false,5:false} // when a step completed once, lock replay/scoring
   };
 
-  const storageKey = 'fiveS_trainer_progress_v2';
+  const storageKey = 'fiveS_trainer_hard_v1';
   const saved = localStorage.getItem(storageKey);
-  if(saved){
-    try{const s=JSON.parse(saved);Object.assign(state,s)}catch(e){}
-  }
+  if(saved){ try{Object.assign(state, JSON.parse(saved));}catch(e){} }
 
-  const $ = sel => document.querySelector(sel);
+  const $ = s=>document.querySelector(s);
   const content = $('#content');
   const stepTitle = $('#stepTitle');
   const hint = $('#hint');
@@ -162,26 +185,30 @@
   const progressLabel = $('#progressLabel');
   const scoreEl = $('#score');
   const mistakesEl = $('#mistakes');
+  const livesEl = $('#lives');
   const stepStat = $('#stepStat');
   const nextBtn = $('#nextBtn');
   const backBtn = $('#backBtn');
+  const failOverlay = $('#fail');
 
-  $('#reset').addEventListener('click',()=>{
-    localStorage.removeItem(storageKey);
-    state.step=1;state.score=0;state.mistakes=0;state.done={1:false,2:false,3:false,4:false,5:false};
-    render();
-  });
+  $('#reset').addEventListener('click', hardReset);
+  $('#restartBtn').addEventListener('click', ()=>{ failOverlay.style.display='none'; hardReset(); });
 
-  nextBtn.addEventListener('click',()=>{
-    if(state.step<5){state.step++;render();}
-  });
-  backBtn.addEventListener('click',()=>{
-    if(state.step>1){state.step--;render();}
-  });
+  nextBtn.addEventListener('click',()=>{ if(state.step<5){state.step++; render();} });
+  backBtn.addEventListener('click',()=>{ if(state.step>1){state.step--; render();} });
 
-  function save(){localStorage.setItem(storageKey,JSON.stringify(state));}
+  function save(){ localStorage.setItem(storageKey, JSON.stringify(state)); }
 
-  function floatMsg(txt, x, y, positive=true){
+  function drawLives(){
+    livesEl.innerHTML = '';
+    for(let i=0;i<MAX_STRIKES;i++){
+      const d=document.createElement('div'); d.className='life' + (i<state.mistakes? ' on':''); livesEl.appendChild(d);
+    }
+  }
+
+  function floatMsg(txt, anchor, positive=true){
+    const r = anchor.getBoundingClientRect();
+    const x = r.left + r.width/2; const y = r.top + (positive?0:r.height);
     const el = document.createElement('div');
     el.className = 'float-msg ' + (positive? 'float-plus':'float-minus');
     el.textContent = txt;
@@ -209,77 +236,88 @@
     }
   }
 
+  function celebrate(anchor){
+    const r = anchor.getBoundingClientRect();
+    confetti(r.left + r.width/2, r.top + r.height/2);
+  }
+
   function addScore(amount, anchor){
-    const rect = anchor.getBoundingClientRect();
-    const x = rect.left + rect.width/2; const y = rect.top;
-    if(amount>0){floatMsg('+'+amount, x, y, true);} else {floatMsg(amount, x, y, false);}    
+    if(amount>0) floatMsg('+'+amount, anchor, true); else floatMsg(amount, anchor, false);
     state.score = Math.max(0, state.score + amount);
     save(); updateHud();
   }
 
-  function wrong(anchor){
-    state.mistakes += 1; addScore(-2, anchor);
-    anchor.classList.add('bad');
-    setTimeout(()=>anchor.classList.remove('bad'),220);
-  }
-
-  function celebrate(anchor){
-    const rect = anchor.getBoundingClientRect();
-    confetti(rect.left + rect.width/2, rect.top + rect.height/2);
+  function strike(anchor){
+    state.mistakes += 1; addScore(-3, anchor);
+    anchor.classList.add('bad'); setTimeout(()=>anchor.classList.remove('bad'),220);
+    if(state.mistakes >= MAX_STRIKES){
+      failOverlay.style.display='flex';
+    }
+    save(); updateHud();
   }
 
   function updateHud(){
-    const pct = Math.round(((Object.values(state.done).filter(Boolean).length)/5)*100);
+    const pct = Math.round((Object.values(state.done).filter(Boolean).length/5)*100);
     bar.style.width = pct+'%';
     progressLabel.textContent = 'Progress ' + pct + '%';
     scoreEl.textContent = state.score;
     mistakesEl.textContent = state.mistakes;
     stepStat.textContent = state.step + ' / 5';
     backBtn.style.display = state.step>1 ? 'inline-flex' : 'none';
+    drawLives();
   }
 
-  function clearContent(){content.innerHTML=''; nextBtn.disabled = !state.done[state.step];}
+  function hardReset(){
+    state.step=1; state.score=0; state.mistakes=0;
+    state.done={1:false,2:false,3:false,4:false,5:false};
+    state.locked={1:false,2:false,3:false,4:false,5:false};
+    save(); render();
+  }
 
-  // Step 1: Sort
+  function clearContent(){ content.innerHTML=''; nextBtn.disabled = !state.done[state.step]; }
+
+  function renderLocked(stepNo){
+    clearContent();
+    const msg = document.createElement('div'); msg.className='card'; msg.style.padding='16px';
+    msg.innerHTML = `<strong>Step ${stepNo} complete.</strong><br><span class="small">This step is locked to prevent score farming.</span>`;
+    content.appendChild(msg); nextBtn.disabled=false; save(); updateHud();
+  }
+
+  // ---------- Step 1: SORT (harder set) ----------
   function step1(){
     stepTitle.textContent = 'Step 1 of 5 · Sort';
-    hint.textContent = 'Move each item to the right place. Keep, Red Tag, or Bin. Wrong moves cost points.';
+    hint.textContent = 'Drag each item to Keep, Red Tag, or Bin. Uncalibrated/unknown → Red Tag. 3 strikes ends the run.';
+    if(state.done[1] && state.locked[1]) return renderLocked(1);
     clearContent();
 
     const items = [
       {id:'megger',label:'Megger insulation tester',cat:'keep'},
       {id:'torque',label:'Torque wrench',cat:'keep'},
       {id:'labels',label:'Label maker',cat:'keep'},
-      {id:'adhesive',label:'Expired adhesive',cat:'bin'},
-      {id:'bolt',label:'Broken bolt',cat:'bin'},
-      {id:'gasket',label:'Cracked gasket',cat:'bin'},
-      {id:'dup-screw',label:'Duplicate screwdriver',cat:'red'},
-      {id:'unknown-jig',label:'Unknown jig',cat:'red'},
-      {id:'unassigned',label:'Unassigned spare parts',cat:'red'}
-    ];
+      {id:'micrometer',label:'Micrometer (in calibration)',cat:'keep'},
+      {id:'uncal_mic',label:'Micrometer (out of calibration)',cat:'red'},
+      {id:'duplicate10',label:'Duplicate 10mm spanner',cat:'red'},
+      {id:'unknown_jig',label:'Mystery jig',cat:'red'},
+      {id:'expired_epoxy',label:'Expired epoxy',cat:'bin'},
+      {id:'cracked_gasket',label:'Cracked gasket',cat:'bin'},
+      {id:'frayed_lead',label:'Frayed power lead',cat:'bin'},
+      {id:'leaky_cells',label:'Leaking battery pack',cat:'bin'},
+      {id:'esd_strap',label:'ESD wrist strap (good)',cat:'keep'}
+    ].sort(()=>Math.random()-0.5);
 
-    const wrap = document.createElement('div');
-    wrap.className='items';
-    wrap.setAttribute('aria-label','Items to sort');
-
+    const wrap = document.createElement('div'); wrap.className='items';
     items.forEach(it=>{
       const el = document.createElement('div');
       el.className='chip'; el.textContent=it.label; el.draggable=true; el.id='it-'+it.id;
-      el.dataset.cat=it.cat; el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-grabbed','false');
+      el.dataset.cat=it.cat; el.setAttribute('aria-grabbed','false');
       el.addEventListener('dragstart',ev=>{ev.dataTransfer.setData('text/plain',el.id); el.setAttribute('aria-grabbed','true');});
       el.addEventListener('dragend',()=>el.setAttribute('aria-grabbed','false'));
-      // click-to-place fallback
       el.addEventListener('click',()=>{selected=el; [...document.querySelectorAll('.zone')].forEach(z=>z.style.outline='2px solid rgba(56,189,248,.5)');});
       wrap.appendChild(el);
     });
 
-    // Zones
     const zones = document.createElement('div'); zones.className='zones';
-    const cats=[
-      {type:'keep',label:'Keep'},
-      {type:'red',label:'Red Tag'},
-      {type:'bin',label:'Bin'}
-    ];
+    const cats=[{type:'keep',label:'Keep'},{type:'red',label:'Red Tag'},{type:'bin',label:'Bin'}];
     let placed=0; let selected=null;
 
     cats.forEach(c=>{
@@ -294,47 +332,50 @@
       if(!el || el.classList.contains('locked')) return;
       const correct = el.dataset.cat === zone.dataset.type;
       if(correct){
-        zone.appendChild(el); el.classList.add('locked'); el.setAttribute('aria-grabbed','false'); el.draggable=false; placed++; addScore(+5, el); celebrate(zone); save(); updateHud();
-        zFlash(zone);
-        if(placed===items.length){ state.done[1]=true; nextBtn.disabled=false; save(); }
-      } else {
-        wrong(el);
-      }
+        zone.appendChild(el); el.classList.add('locked'); el.draggable=false; placed++; addScore(+5, el); celebrate(zone);
+        if(placed===items.length){ state.done[1]=true; state.locked[1]=true; nextBtn.disabled=false; save(); updateHud(); }
+      } else { strike(el); }
     }
 
-    function zFlash(z){ z.classList.add('flash'); setTimeout(()=>z.classList.remove('flash'),500); }
-
-    const layout = document.createElement('div');
-    layout.style.display='grid'; layout.style.gap='12px';
-    layout.appendChild(wrap); layout.appendChild(zones);
-    content.appendChild(layout);
+    const layout = document.createElement('div'); layout.style.display='grid'; layout.style.gap='12px';
+    layout.appendChild(wrap); layout.appendChild(zones); content.appendChild(layout);
   }
 
-  // Step 2: Set in Order
+  // ---------- Step 2: SET IN ORDER (more slots + decoy) ----------
   function step2(){
     stepTitle.textContent = 'Step 2 of 5 · Set in Order';
-    hint.textContent = 'Place each tool into its labelled home. Wrong matches cost points.';
+    hint.textContent = 'Place each tool into its exact home. One slot is a decoy.';
+    if(state.done[2] && state.locked[2]) return renderLocked(2);
     clearContent();
 
     const names = [
       {id:'megger',label:'Megger insulation tester'},
       {id:'torque',label:'Torque wrench'},
-      {id:'labels',label:'Label maker'}
+      {id:'labels',label:'Label maker'},
+      {id:'esd',label:'ESD wrist strap'},
+      {id:'micrometer',label:'Micrometer (in calibration)'}
     ];
+
+    const homes = {
+      megger: 'Electrical test equipment drawer',
+      torque: 'Torque drawer',
+      labels: 'Consumables shelf',
+      esd: 'PPE / ESD station',
+      micrometer: 'Metrology drawer'
+    };
 
     const so = document.createElement('div'); so.className='so-grid';
     const deck = document.createElement('div'); deck.className='so-grid';
 
-    const home = {
-      megger: 'Electrical test equipment drawer',
-      torque: 'Torque drawer',
-      labels: 'Consumables shelf'
-    };
-
-    names.forEach(n=>{
-      const slot = document.createElement('div'); slot.className='slot'; slot.dataset.accept=n.id; slot.textContent=`${n.label} home`;
-      const sub=document.createElement('div'); sub.className='small'; sub.textContent=`Ideal: ${home[n.id]}`; sub.style.opacity=.65; sub.style.marginTop='6px';
-      slot.appendChild(sub);
+    // Create 6 slots for 5 items (1 decoy slot)
+    const slotOrder = ['megger','torque','labels','esd','micrometer','decoy'];
+    slotOrder.forEach(key=>{
+      const slot = document.createElement('div'); slot.className='slot';
+      if(key==='decoy'){
+        slot.dataset.accept='none'; slot.innerHTML='<strong>Workbench surface</strong><div class="small" style="opacity:.7;margin-top:6px">Decoy: tools should not live here</div>';
+      } else {
+        slot.dataset.accept=key; slot.innerHTML = `<strong>${names.find(n=>n.id===key).label} home</strong><div class="small" style="opacity:.7;margin-top:6px">Ideal: ${homes[key]}</div>`;
+      }
       slot.addEventListener('dragover',ev=>ev.preventDefault());
       slot.addEventListener('drop',ev=>{ev.preventDefault(); const id=ev.dataTransfer.getData('text/plain'); placeSO(document.getElementById(id),slot)});
       so.appendChild(slot);
@@ -342,93 +383,154 @@
 
     names.sort(()=>Math.random()-0.5).forEach(n=>{
       const item = document.createElement('div'); item.className='so-item'; item.id='so-'+n.id; item.textContent=n.label; item.draggable=true;
-      item.dataset.id=n.id;
-      item.addEventListener('dragstart',ev=>ev.dataTransfer.setData('text/plain',item.id));
-      deck.appendChild(item);
+      item.dataset.id=n.id; item.addEventListener('dragstart',ev=>ev.dataTransfer.setData('text/plain',item.id)); deck.appendChild(item);
     });
 
     let placed=0;
     function placeSO(el,slot){
-      if(!el){return}
-      if(slot.dataset.accept!==el.dataset.id) {
-        wrong(el);
-        return;
-      }
+      if(!el) return;
+      if(slot.dataset.accept!==el.dataset.id){ strike(el); return; }
       slot.classList.add('flash');
-      slot.innerHTML='✅ '+slot.textContent.replace(' home',''); slot.appendChild(el); el.draggable=false; el.style.opacity=.7; placed++; addScore(+5, slot); celebrate(slot); save(); updateHud();
-      if(placed===names.length){ state.done[2]=true; nextBtn.disabled=false; save(); }
+      slot.innerHTML='✅ '+slot.textContent.replace(' home',''); slot.appendChild(el); el.draggable=false; el.style.opacity=.7; placed++; addScore(+6, slot); celebrate(slot);
+      if(placed===names.length){ state.done[2]=true; state.locked[2]=true; nextBtn.disabled=false; save(); updateHud(); }
     }
 
-    const wrap = document.createElement('div');
-    wrap.style.display='grid'; wrap.style.gap='12px';
-    wrap.appendChild(deck); wrap.appendChild(so);
-    content.appendChild(wrap);
+    const wrap = document.createElement('div'); wrap.style.display='grid'; wrap.style.gap='12px';
+    wrap.appendChild(deck); wrap.appendChild(so); content.appendChild(wrap);
   }
 
-  // Step 3: Shine
+  // ---------- Step 3: SHINE (hazards you must not click) ----------
   function step3(){
     stepTitle.textContent = 'Step 3 of 5 · Shine';
-    hint.textContent = 'Click the dirt spots to clean the bench.';
+    hint.textContent = 'Clean all dirt spots. Do NOT click hazards (yellow) – they represent sensitive parts.';
+    if(state.done[3] && state.locked[3]) return renderLocked(3);
     clearContent();
 
     const bench = document.createElement('div'); bench.className='bench';
-    const spots=12; let cleaned=0;
-    for(let i=0;i<spots;i++){
-      const s=document.createElement('div'); s.className='spot'; s.style.left=Math.random()*92+2+'%'; s.style.top=Math.random()*80+8+'%';
-      s.addEventListener('click',()=>{ if(!s.classList.contains('clean')){ s.classList.add('clean'); cleaned++; addScore(+2, s); confettiAtEl(s); save(); updateHud(); if(cleaned===spots){ state.done[3]=true; nextBtn.disabled=false; save(); }} });
+    const totalSpots = 16, hazards = 4; let cleaned=0;
+    const used=[];
+    function randPos(){ let x,y,key; do{ x=Math.random()*92+4; y=Math.random()*80+10; key=x.toFixed(1)+'_'+y.toFixed(1);} while(used.includes(key)); used.push(key); return {x,y}; }
+
+    for(let i=0;i<totalSpots;i++){
+      const s=document.createElement('div'); s.className='spot';
+      const {x,y}=randPos(); s.style.left=x+'%'; s.style.top=y+'%';
       bench.appendChild(s);
     }
+    // Add hazards
+    for(let i=0;i<hazards;i++){
+      const h=document.createElement('div'); h.className='spot hazard';
+      const {x,y}=randPos(); h.style.left=x+'%'; h.style.top=y+'%'; bench.appendChild(h);
+    }
+
+    bench.querySelectorAll('.spot').forEach(el=>{
+      el.addEventListener('click',()=>{
+        if(el.classList.contains('hazard')){ strike(el); return; }
+        if(el.classList.contains('clean')) return;
+        el.classList.add('clean'); cleaned++; addScore(+2, el); celebrate(el);
+        if(cleaned>=totalSpots){ state.done[3]=true; state.locked[3]=true; nextBtn.disabled=false; save(); updateHud(); }
+      });
+    });
+
     content.appendChild(bench);
   }
 
-  function confettiAtEl(el){ const r=el.getBoundingClientRect(); confetti(r.left+r.width/2, r.top+r.height/2); }
-
-  // Step 4: Standardise
+  // ---------- Step 4: STANDARDISE (reorder puzzle) ----------
   function step4(){
     stepTitle.textContent = 'Step 4 of 5 · Standardise';
-    hint.textContent = 'Tick the actions you have put in place.';
+    hint.textContent = 'Reorder the actions into the best practice sequence, then validate.';
+    if(state.done[4] && state.locked[4]) return renderLocked(4);
     clearContent();
 
-    const list=[
-      'Tool board labels match names',
-      'Floor outlines and colour coding applied',
-      'Cleaning checklist posted at the area',
-      'Spare parts list created and stored',
-      'Photo of tidy state printed for reference'
+    const correct = [
+      'Agree common names for tools',
+      'Mark floor outlines & colour code',
+      'Print labels & shadow board',
+      'Photograph tidy state for reference',
+      'Post cleaning checklist at the area'
     ];
+    const shuffled = [...correct].sort(()=>Math.random()-0.5);
 
-    const wrap=document.createElement('div'); wrap.className='checklist'; let checked=0;
-    list.forEach((txt,i)=>{
-      const row=document.createElement('label'); row.className='check';
-      const cb=document.createElement('input'); cb.type='checkbox'; cb.addEventListener('change',()=>{
-        checked += cb.checked?1:-1; addScore(cb.checked?+3:-3, row); save(); updateHud(); if(checked===list.length){ state.done[4]=true; nextBtn.disabled=false; save(); }
-      });
-      row.appendChild(cb); const span=document.createElement('span'); span.textContent=txt; row.appendChild(span); wrap.appendChild(row);
+    const list = document.createElement('div'); list.className='order';
+    shuffled.forEach((txt,i)=>{
+      const card=document.createElement('div'); card.className='step-card'; card.draggable=true; card.dataset.value=txt;
+      const h=document.createElement('div'); h.className='handle'; card.appendChild(h);
+      const span=document.createElement('span'); span.textContent=txt; card.appendChild(span);
+      card.addEventListener('dragstart',ev=>{ev.dataTransfer.setData('text/plain', txt); card.classList.add('ghost');});
+      card.addEventListener('dragend',()=>card.classList.remove('ghost'));
+      card.addEventListener('dragover',ev=>ev.preventDefault());
+      card.addEventListener('drop',ev=>{ev.preventDefault(); const val=ev.dataTransfer.getData('text/plain'); reorder(val, txt);});
+      list.appendChild(card);
     });
-    content.appendChild(wrap);
+
+    function reorder(val, target){
+      if(val===target) return;
+      const a=[...list.children].find(c=>c.dataset.value===val);
+      const b=[...list.children].find(c=>c.dataset.value===target);
+      if(a&&b){ list.insertBefore(a, b); }
+    }
+
+    const controls=document.createElement('div'); controls.style.display='flex'; controls.style.gap='10px'; controls.style.marginTop='12px';
+    const validateBtn=document.createElement('button'); validateBtn.className='primary'; validateBtn.textContent='Validate order';
+    validateBtn.addEventListener('click',()=>{
+      const cur=[...list.children].map(c=>c.dataset.value);
+      const ok = cur.every((v,i)=>v===correct[i]);
+      if(ok){ addScore(+12, validateBtn); celebrate(validateBtn); state.done[4]=true; state.locked[4]=true; nextBtn.disabled=false; save(); updateHud(); }
+      else { strike(validateBtn); }
+    });
+    controls.appendChild(validateBtn);
+
+    content.appendChild(list); content.appendChild(controls);
   }
 
-  // Step 5: Sustain
+  // ---------- Step 5: SUSTAIN (quiz + schedule) ----------
   function step5(){
     stepTitle.textContent = 'Step 5 of 5 · Sustain';
-    hint.textContent = 'Choose an audit frequency and confirm to finish.';
+    hint.textContent = 'Answer all questions correctly and set an audit frequency.';
+    if(state.done[5] && state.locked[5]) return renderLocked(5);
     clearContent();
 
-    const box=document.createElement('div'); box.className='sustain';
-    const sel=document.createElement('select'); sel.innerHTML=`
-      <option value="" disabled selected>Select frequency</option>
-      <option>Weekly</option>
-      <option>Fortnightly</option>
-      <option>Monthly</option>
-    `;
-    const btn=document.createElement('button'); btn.className='primary'; btn.textContent='Confirm schedule'; btn.disabled=true;
-    sel.addEventListener('change',()=>{btn.disabled=!sel.value});
-    btn.addEventListener('click',()=>{ state.done[5]=true; addScore(+10, btn); save(); updateHud(); btn.textContent='Saved'; btn.disabled=true; alert('Nice work. You completed all 5S steps.'); });
-    box.appendChild(sel); box.appendChild(btn);
+    const qWrap=document.createElement('div'); qWrap.className='card'; qWrap.style.padding='12px';
 
-    const doneMsg=document.createElement('p'); doneMsg.className='hint'; doneMsg.textContent='Tip: Put a short audit on your team calendar so it actually happens.';
+    const qs=[
+      {q:'What does the Red Tag mean?', opts:['Throw it out immediately','Keep but mark as priority','Needs a decision or action before keeping'], a:2},
+      {q:'Where should the Megger live?', opts:['Metrology drawer','Electrical test equipment drawer','Workbench surface'], a:1},
+      {q:'When should cleaning happen?', opts:['Only after defects','On a regular schedule built into work','Never during production'], a:1}
+    ];
 
-    content.appendChild(box); content.appendChild(doneMsg);
+    const answers=[];
+    qs.forEach((obj,qi)=>{
+      const b=document.createElement('div'); b.style.margin='8px 0';
+      const h=document.createElement('div'); h.textContent = (qi+1)+'. '+obj.q; h.className='small'; h.style.marginBottom='6px'; b.appendChild(h);
+      obj.opts.forEach((o,oi)=>{
+        const lab=document.createElement('label'); lab.style.display='block'; lab.style.margin='2px 0';
+        const rad=document.createElement('input'); rad.type='radio'; rad.name='q'+qi; rad.value=oi; lab.appendChild(rad);
+        lab.appendChild(document.createTextNode(' '+o)); b.appendChild(lab);
+        rad.addEventListener('change',()=>{ answers[qi]=oi; });
+      });
+      qWrap.appendChild(b);
+    });
+
+    const sustainBox=document.createElement('div'); sustainBox.style.marginTop='10px';
+    sustainBox.innerHTML=`<label>Audit frequency
+      <select id="freq">
+        <option value="" selected>Select…</option>
+        <option>Weekly</option>
+        <option>Fortnightly</option>
+        <option>Monthly</option>
+      </select>
+    </label>`;
+
+    const submit=document.createElement('button'); submit.className='primary'; submit.textContent='Finish'; submit.style.marginTop='10px';
+    submit.addEventListener('click',()=>{
+      // Check answers
+      for(let i=0;i<qs.length;i++){
+        if(answers[i]!==qs[i].a){ strike(submit); return; }
+      }
+      const f=$('#freq'); if(!f.value){ strike(submit); return; }
+      addScore(+15, submit); celebrate(submit); state.done[5]=true; state.locked[5]=true; nextBtn.disabled=false; save(); updateHud(); alert('Legend. Hard mode cleared!');
+    });
+
+    content.appendChild(qWrap); content.appendChild(sustainBox); content.appendChild(submit);
   }
 
   function render(){
@@ -442,6 +544,7 @@
     }
   }
 
+  // Kickoff
   render();
 })();
 </script>
