@@ -1,158 +1,626 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-NZ">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>On-Page Search (Enter to find, jump to hit)</title>
-<style>
-  :root{
-    --bg:#0b1220; --panel:#141b2d; --ink:#e9eef7; --muted:#a9b3c7;
-    --accent:#4bb3ff; --accent-2:#6ee7b7; --warn:#f59e0b;
-  }
-  html,body{height:100%}
-  body{margin:0;font:16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial;
-       color:var(--ink);background:linear-gradient(180deg,#0e1629,#0b1220)}
-  /* Demo content area */
-  .content{max-width:900px;margin:110px auto 80px;padding:0 20px}
-  .content h1,.content h2{margin:1.2em 0 .4em}
-  .content p{color:#cfd7e6}
-  /* Search UI */
-  .searchbar{
-    position:fixed; inset:16px 16px auto 16px; z-index:99999;
-    display:flex; gap:8px; align-items:center; padding:10px 12px;
-    background:linear-gradient(180deg,var(--panel),#0f172a 60%);
-    border:1px solid #1f2a44; box-shadow:0 10px 25px rgba(0,0,0,.35);
-    border-radius:14px;
-  }
-  .searchbar *{font:inherit}
-  .searchbar [data-role="status"]{color:var(--muted); min-width:90px; text-align:center}
-  .searchbar input[type="search"]{
-    flex:1; min-width:260px; padding:10px 12px 10px 36px; color:var(--ink);
-    background:rgba(255,255,255,.04); border:1px solid #26324f; border-radius:10px;
-    outline:none;
-  }
-  .searchbar input[type="search"]::placeholder{color:#98a5bf}
-  .searchbar .btn{
-    user-select:none; border:1px solid #26324f; background:#10182a; color:var(--ink);
-    padding:9px 12px; border-radius:10px; cursor:pointer;
-  }
-  .searchbar .btn[disabled]{opacity:.45; cursor:not-allowed}
-  .searchbar .icon{
-    position:absolute; margin-left:12px; pointer-events:none; opacity:.7
-  }
-  .searchbar .tiny{font-size:12px; color:var(--muted); padding:0 4px}
-  /* Highlight styling */
-  mark.sb-hit{
-    background:linear-gradient(90deg, rgba(75,179,255,.35), rgba(110,231,183,.35));
-    padding:2px 0; border-radius:2px;
-    box-shadow:0 0 0 1px rgba(75,179,255,.25) inset;
-    scroll-margin-top:90px; /* keeps hit clear of the fixed bar */
-  }
-  /* Focus ring for the active hit */
-  .sb-active{
-    outline:3px solid var(--accent);
-    transition:outline-color .2s ease;
-  }
-  /* Small keyboard help */
-  .help{
-    position:fixed; right:18px; bottom:18px; color:#9fb0cc; font-size:13px;
-    background:rgba(16,24,42,.7); border:1px solid #26324f; padding:8px 10px; border-radius:10px;
-  }
-  /* Prevent the search UI from being included in results */
-  .searchbar,[data-no-search]{contain:content}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Meal Plan Creator — Single File</title>
+  <style>
+    :root{
+      --bg:#0b1220;--panel:#0f172a;--panel2:#111827;--ink:#e5e7eb;--muted:#9ca3af;--acc:#22c55e;--acc2:#3b82f6;--warn:#f59e0b;--err:#ef4444;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#0b1220,#0b1220 30%,#0a0f1a);color:var(--ink);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    a{color:var(--acc2)}
+    .app{display:grid;grid-template-columns:320px 1fr;grid-template-rows:auto 1fr;min-height:100vh}
+    header{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:14px 18px;background:var(--panel);border-bottom:1px solid #1f2937;position:sticky;top:0;z-index:10}
+    header h1{font-size:18px;margin:0}
+    header .actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+    button,.btn{background:#1f2937;border:1px solid #283244;color:var(--ink);padding:8px 12px;border-radius:10px;cursor:pointer}
+    button:hover,.btn:hover{background:#243041}
+    button.primary{background:var(--acc2);border-color:transparent;color:white}
+    button.success{background:var(--acc);border-color:transparent;color:#06240f}
+    button.warning{background:var(--warn);border-color:transparent;color:#352408}
+    button.danger{background:var(--err);border-color:transparent}
+    .col{padding:14px}
+    .left{background:var(--panel)}
+    .card{background:var(--panel2);border:1px solid #1f2937;border-radius:14px;padding:12px;margin-bottom:12px}
+    .card h2{margin:0 0 8px;font-size:16px}
+    label{display:block;margin:8px 0 4px;color:var(--muted)}
+    input[type="text"],input[type="number"],select,textarea{width:100%;padding:8px 10px;border-radius:10px;border:1px solid #2a3648;background:#0f172a;color:var(--ink)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    .kpi{background:#0e1527;border:1px solid #1f2937;border-radius:12px;padding:10px;text-align:center}
+    .kpi b{display:block;font-size:18px}
+    .right{padding:14px;display:flex;flex-direction:column;gap:12px}
+    .planner{background:var(--panel2);border:1px solid #1f2937;border-radius:14px;padding:12px}
+    .planner h2{margin:0 0 8px}
+    table{width:100%;border-collapse:separate;border-spacing:0;overflow:auto}
+    th,td{border-bottom:1px solid #223047;padding:8px;vertical-align:top}
+    th{position:sticky;top:66px;background:#151c2e;z-index:5}
+    tr:last-child td{border-bottom:none}
+    .slot{display:flex;flex-direction:column;gap:6px}
+    .chip{display:inline-flex;align-items:center;gap:6px;background:#0d1426;border:1px solid #223047;border-radius:999px;padding:4px 8px}
+    .chip small{color:var(--muted)}
+    .chip button{border:none;background:transparent;color:#94a3b8;cursor:pointer;padding:0 2px}
+    .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .footer{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px}
+    .muted{color:var(--muted)}
+    .notice{font-size:12px;color:#94a3b8}
+    .divider{height:1px;background:#223047;margin:10px 0}
+    .hidden{display:none}
+    .tag{background:#0b1220;border:1px solid #1f2937;padding:2px 6px;border-radius:8px;font-size:12px;color:#a5b4fc}
+    .totals{display:flex;gap:10px;flex-wrap:wrap}
+    .totals .kpi{min-width:120px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    @media(max-width:980px){.app{grid-template-columns:1fr} th{top:114px}}
+    @media print{header,.left,.footer{display:none} th{top:0} body{background:white;color:black} .planner{border:none}}
+  </style>
 </head>
 <body>
+  <div class="app">
+    <header>
+      <h1>Meal Plan Creator</h1>
+      <div class="actions">
+        <button id="saveBtn" class="success" title="Save to this device">Save</button>
+        <button id="loadBtn" title="Load saved">Load</button>
+        <button id="exportBtn" class="primary" title="Export to file">Export</button>
+        <input id="importFile" type="file" accept="application/json" hidden>
+        <button id="importBtn" title="Import from file">Import</button>
+        <button id="printBtn" title="Print or save as PDF">Print / PDF</button>
+        <button id="resetBtn" class="danger" title="Clear everything">Reset</button>
+      </div>
+    </header>
 
-<!-- Search UI -->
-<div class="searchbar" role="search" aria-label="On-page search" data-no-search>
-  <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M21 21l-4.3-4.3m1.3-5.2a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  </svg>
-  <input id="sb-input" type="search" placeholder="Search this page, then press Enter"
-         autocomplete="off" spellcheck="false" aria-controls="sb-status" />
-  <button id="sb-prev" class="btn" title="Previous match" disabled>Prev</button>
-  <button id="sb-next" class="btn" title="Next match" disabled>Next</button>
-  <span id="sb-status" class="tiny" data-role="status" aria-live="polite">0 results</span>
-  <button id="sb-clear" class="btn" title="Clear results" disabled>Clear</button>
-</div>
+    <section class="col left">
+      <div class="card">
+        <h2>Client</h2>
+        <div class="row">
+          <div>
+            <label>Client name</label>
+            <input id="clientName" type="text" placeholder="e.g. Alex Smith" />
+          </div>
+          <div>
+            <label>Plan title</label>
+            <input id="planTitle" type="text" placeholder="e.g. 2 000 kcal fat loss" />
+          </div>
+        </div>
+        <div class="kpis" style="margin-top:8px">
+          <div class="kpi"><small>Energy target</small><b id="kcalTarget">2000</b><small class="muted">kcal / day</small></div>
+          <div class="kpi"><small>Protein</small><b id="proteinTarget">150 g</b><small class="muted">4 kcal/g</small></div>
+          <div class="kpi"><small>Carbs</small><b id="carbTarget">200 g</b><small class="muted">4 kcal/g</small></div>
+          <div class="kpi"><small>Fat</small><b id="fatTarget">67 g</b><small class="muted">9 kcal/g</small></div>
+        </div>
+        <div class="divider"></div>
+        <div class="row">
+          <div>
+            <label>Daily energy (kcal)</label>
+            <input id="kcalInput" type="number" min="800" max="5000" step="10" value="2000">
+          </div>
+          <div>
+            <label>Meals per day</label>
+            <select id="mealsPerDay">
+              <option>3</option>
+              <option selected>4</option>
+              <option>5</option>
+              <option>6</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid-3">
+          <div>
+            <label>Protein %</label>
+            <input id="pPct" type="number" min="10" max="50" step="1" value="30">
+          </div>
+          <div>
+            <label>Carb %</label>
+            <input id="cPct" type="number" min="10" max="70" step="1" value="40">
+          </div>
+          <div>
+            <label>Fat %</label>
+            <input id="fPct" type="number" min="15" max="50" step="1" value="30">
+          </div>
+        </div>
+        <p class="notice">Set calories and macro percentages. Targets update automatically.</p>
+      </div>
 
-<!-- Demo content. Replace with your page content. -->
-<div class="content" id="page-content">
-  <h1>Sample Page Content</h1>
-  <p>This is placeholder text so you can test the on-page search. Enter a word like “vacuum”, “caliper”, or “safety”.</p>
-  <p>In a typical engineering workspace you might reference a vacuum chamber, a megger tester for insulation resistance, a digital caliper for quick checks, and a torque wrench for fasteners.</p>
-  <h2>Good housekeeping</h2>
-  <p>Keep aisles clear, label drawers, and store measuring tools where they are used. Reduce motion and waiting by keeping common items near the point of use.</p>
-  <h2>Safety reminders</h2>
-  <p>Verify isolation before tests, follow lockout procedures, and document the results. If something looks off, stop and investigate.</p>
-  <p>Try a search for “tester”, then use Next and Prev to move between hits.</p>
-</div>
+      <div class="card">
+        <h2>Preferences</h2>
+        <label>Dietary pattern</label>
+        <select id="diet">
+          <option value="balanced" selected>Balanced</option>
+          <option value="high-protein">High protein</option>
+          <option value="vegetarian">Vegetarian</option>
+          <option value="vegan">Vegan</option>
+          <option value="low-carb">Lower carb</option>
+          <option value="gluten-free">Gluten free</option>
+        </select>
+        <label>Allergens / avoid</label>
+        <input id="allergens" type="text" placeholder="e.g. peanuts, shellfish, gluten" />
+        <label>Notes</label>
+        <textarea id="notes" rows="3" placeholder="Any special requests"></textarea>
+      </div>
 
-<div class="help" data-no-search>
-  Enter to search. Enter again to jump to next. Esc to clear.
-</div>
+      <div class="card">
+        <h2>Foods</h2>
+        <div class="row">
+          <input id="foodSearch" type="text" placeholder="Search foods…">
+          <button id="addFoodBtn">Add custom food</button>
+        </div>
+        <div id="foodList" class="notice" style="max-height:260px;overflow:auto;margin-top:8px"></div>
+        <p class="notice">Click a food to add to a recipe or a plan slot. Nutrition is per 100 g unless noted.</p>
+      </div>
+
+      <div class="card">
+        <h2>Recipe builder</h2>
+        <div class="row">
+          <input id="recipeName" type="text" placeholder="Recipe name, e.g. Chicken rice bowl">
+          <input id="recipeServings" type="number" min="1" value="2" title="Servings">
+        </div>
+        <div id="recipeItems" class="notice">No ingredients yet</div>
+        <div class="footer">
+          <button id="addToPlanBtn" class="primary">Add to today</button>
+          <button id="saveRecipeBtn" class="success">Save recipe</button>
+          <button id="clearRecipeBtn">Clear</button>
+          <span id="recipeTotals" class="muted"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Saved recipes</h2>
+        <div id="recipesList" class="notice">None yet</div>
+      </div>
+    </section>
+
+    <section class="right">
+      <div class="planner">
+        <div class="flex" style="justify-content:space-between;align-items:end">
+          <div>
+            <h2 id="planHeading">Weekly plan</h2>
+            <div class="muted" id="planMeta"></div>
+          </div>
+          <div class="flex">
+            <label class="muted">Week starting</label>
+            <input id="weekStart" type="date">
+            <button id="shoppingBtn" class="primary">Shopping list</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div style="overflow:auto">
+          <table id="planTable"></table>
+        </div>
+        <div class="divider"></div>
+        <div class="totals" id="weekTotals"></div>
+        <div class="footer">
+          <button id="autoFillBtn">Auto fill day</button>
+          <button id="clearDayBtn">Clear day</button>
+        </div>
+      </div>
+
+      <div class="planner" id="shoppingPanel" style="display:none">
+        <h2>Shopping list</h2>
+        <div id="shoppingList" class="notice">Create a plan first</div>
+        <div class="footer"><button id="copyShopBtn" class="primary">Copy</button></div>
+      </div>
+    </section>
+  </div>
 
 <script>
-(function(){
-  const input = document.getElementById('sb-input');
-  const btnNext = document.getElementById('sb-next');
-  const btnPrev = document.getElementById('sb-prev');
-  const btnClear = document.getElementById('sb-clear');
-  const status = document.getElementById('sb-status');
-  const NO_SEARCH_SELECTOR = '[data-no-search]';
-  const SKIP_TAGS = new Set(['SCRIPT','STYLE','NOSCRIPT','IFRAME','CANVAS','SVG','VIDEO','AUDIO','CODE','KBD','SAMP','PRE','BUTTON','INPUT','TEXTAREA','SELECT']);
-  let hits = [];           // Array<HTMLElement> for each wrapped match
-  let activeIndex = -1;    // Current match index
-  let lastQuery = '';      // Query used for the current highlight set
+// ---------- Data ----------
+const DB = {
+  foods: [
+    {name:'Chicken breast, raw', unit:'g', per:100, kcal:165, p:31, c:0, f:3.6},
+    {name:'Salmon, raw', unit:'g', per:100, kcal:208, p:20, c:0, f:13},
+    {name:'Egg', unit:'item', per:1, grams:50, kcal:72, p:6.3, c:0.4, f:4.8},
+    {name:'Rolled oats, dry', unit:'g', per:100, kcal:389, p:16.9, c:66.3, f:6.9},
+    {name:'Brown rice, cooked', unit:'g', per:100, kcal:111, p:2.6, c:23, f:0.9},
+    {name:'White rice, cooked', unit:'g', per:100, kcal:130, p:2.4, c:28, f:0.3},
+    {name:'Quinoa, cooked', unit:'g', per:100, kcal:120, p:4.4, c:21.3, f:1.9},
+    {name:'Sweet potato, baked', unit:'g', per:100, kcal:90, p:2, c:21, f:0.1},
+    {name:'Broccoli', unit:'g', per:100, kcal:35, p:2.4, c:7, f:0.4},
+    {name:'Spinach', unit:'g', per:100, kcal:23, p:2.9, c:3.6, f:0.4},
+    {name:'Olive oil', unit:'g', per:10, kcal:90, p:0, c:0, f:10},
+    {name:'Almond butter', unit:'g', per:15, kcal:98, p:3.4, c:3.4, f:8.8},
+    {name:'Greek yoghurt, 2%', unit:'g', per:100, kcal:73, p:10, c:3.9, f:2},
+    {name:'Milk, 1%', unit:'ml', per:250, kcal:103, p:8.3, c:12, f:2.5},
+    {name:'Whey protein', unit:'scoop', per:1, grams:30, kcal:120, p:24, c:3, f:1.5},
+    {name:'Banana', unit:'item', per:1, grams:120, kcal:105, p:1.3, c:27, f:0.3},
+    {name:'Apple', unit:'item', per:1, grams:180, kcal:95, p:0.5, c:25, f:0.3},
+    {name:'Almonds', unit:'g', per:28, kcal:164, p:6, c:6, f:14},
+    {name:'Chickpeas, cooked', unit:'g', per:100, kcal:164, p:9, c:27, f:2.6},
+    {name:'Tofu, firm', unit:'g', per:100, kcal:144, p:17, c:3.2, f:8.7}
+  ],
+  recipes: []
+};
 
-  function isElementVisible(el){
-    if(!el || el.nodeType !== 1) return false;
-    const cs = window.getComputedStyle(el);
-    if(cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return false;
-    // Walk up to ensure no ancestor hides it or is marked no-search
-    let cur = el;
-    while(cur && cur !== document.body){
-      if(cur.matches && cur.matches(NO_SEARCH_SELECTOR)) return false;
-      const s = window.getComputedStyle(cur);
-      if(s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') return false;
-      cur = cur.parentElement;
+const state = {
+  clientName:'', planTitle:'', kcal:2000, mealsPerDay:4, pPct:30, cPct:40, fPct:30,
+  diet:'balanced', allergens:'', notes:'', weekStart: new Date().toISOString().slice(0,10),
+  plan: initEmptyPlan(4), // 7 days x meals
+};
+
+function initEmptyPlan(mpd){
+  return Array.from({length:7},()=>Array.from({length:mpd},()=>[]));
+}
+
+// ---------- Helpers ----------
+const $ = sel => document.querySelector(sel);
+const el = (tag, cls, txt) => { const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; };
+const kcalFrom = (p,c,f)=> p*4 + c*4 + f*9;
+function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
+
+function computeTargets(){
+  const kcal = +$('#kcalInput').value;
+  let pPct= +$('#pPct').value, cPct= +$('#cPct').value, fPct= +$('#fPct').value;
+  const total = pPct + cPct + fPct;
+  if(total!==100){
+    // normalise to 100
+    pPct = Math.round(pPct/total*100);
+    cPct = Math.round(cPct/total*100);
+    fPct = 100 - pPct - cPct;
+    $('#pPct').value=pPct; $('#cPct').value=cPct; $('#fPct').value=fPct;
+  }
+  const p = Math.round((kcal * pPct/100)/4);
+  const c = Math.round((kcal * cPct/100)/4);
+  const f = Math.round((kcal * fPct/100)/9);
+  $('#kcalTarget').textContent=kcal;
+  $('#proteinTarget').textContent=p+' g';
+  $('#carbTarget').textContent=c+' g';
+  $('#fatTarget').textContent=f+' g';
+  state.kcal=kcal; state.pPct=pPct; state.cPct=cPct; state.fPct=fPct;
+}
+
+function renderFoodList(){
+  const q = $('#foodSearch').value.toLowerCase().trim();
+  const wrap = $('#foodList');
+  wrap.innerHTML='';
+  const foods = DB.foods.filter(f=> f.name.toLowerCase().includes(q));
+  if(!foods.length){ wrap.textContent='No foods found'; return; }
+  foods.forEach((f,i)=>{
+    const row = el('div','flex');
+    row.style.justifyContent='space-between';
+    row.style.borderBottom='1px solid #223047';
+    row.style.padding='6px 0';
+    const left = el('div');
+    left.innerHTML = `<b>${f.name}</b><div class="muted">Per ${f.per} ${f.unit}${f.grams?` (~${f.grams} g)`:''} — ${f.kcal} kcal · P ${f.p} g · C ${f.c} g · F ${f.f} g</div>`;
+    const addBtn = el('button'); addBtn.textContent='Use'; addBtn.onclick=()=> addFoodToRecipe(f);
+    row.append(left, addBtn);
+    wrap.append(row);
+  });
+}
+
+function addFoodToRecipe(food){
+  if(!currentRecipe.name) startNewRecipe();
+  const amount = food.per; // default
+  currentRecipe.items.push({name:food.name, ref:food, amount});
+  renderRecipe();
+}
+
+let currentRecipe = {name:'', servings:2, items:[]};
+
+function startNewRecipe(){
+  currentRecipe = {name:$('#recipeName').value||'', servings:+$('#recipeServings').value||2, items:[]};
+}
+
+function renderRecipe(){
+  $('#recipeName').value=currentRecipe.name;
+  $('#recipeServings').value=currentRecipe.servings;
+  const box = $('#recipeItems');
+  if(!currentRecipe.items.length){ box.className='notice'; box.textContent='No ingredients yet'; $('#recipeTotals').textContent=''; return; }
+  box.className='';
+  box.innerHTML='';
+  let tot={kcal:0,p:0,c:0,f:0, grams:0};
+  currentRecipe.items.forEach((it,idx)=>{
+    const line = el('div','chip');
+    const grams = it.ref.grams? (it.amount * (it.ref.grams/it.ref.per)) : it.amount;
+    const scale = it.amount/it.ref.per;
+    const kcal = it.ref.kcal*scale, p=it.ref.p*scale, c=it.ref.c*scale, f=it.ref.f*scale;
+    tot.kcal+=kcal; tot.p+=p; tot.c+=c; tot.f+=f; tot.grams+=grams||0;
+    line.innerHTML = `<b>${it.name}</b> <small>${fmt(it.amount)} ${it.ref.unit}</small> <small>· ${Math.round(kcal)} kcal</small>`;
+    const amt = el('input'); amt.type='number'; amt.value=it.amount; amt.min=1; amt.style.width='90px';
+    amt.onchange=()=>{it.amount=+amt.value; renderRecipe();};
+    const del = el('button'); del.textContent='×'; del.title='Remove'; del.onclick=()=>{currentRecipe.items.splice(idx,1); renderRecipe();};
+    line.append(amt, del);
+    box.append(line);
+  });
+  const per = {kcal: tot.kcal/currentRecipe.servings, p: tot.p/currentRecipe.servings, c: tot.c/currentRecipe.servings, f: tot.f/currentRecipe.servings};
+  $('#recipeTotals').textContent = `Total: ${Math.round(tot.kcal)} kcal · P ${Math.round(tot.p)} g · C ${Math.round(tot.c)} g · F ${Math.round(tot.f)} g | Per serve (${currentRecipe.servings}): ${Math.round(per.kcal)} kcal, P ${Math.round(per.p)} g, C ${Math.round(per.c)} g, F ${Math.round(per.f)} g`;
+}
+
+function saveCurrentRecipe(){
+  const name = ($('#recipeName').value||'').trim();
+  if(!name){ alert('Give the recipe a name'); return; }
+  currentRecipe.name = name;
+  currentRecipe.servings = +$('#recipeServings').value||1;
+  const copy = JSON.parse(JSON.stringify(currentRecipe));
+  DB.recipes.push(copy);
+  currentRecipe = {name:'', servings:2, items:[]};
+  renderRecipe();
+  renderRecipesList();
+}
+
+function renderRecipesList(){
+  const box = $('#recipesList');
+  if(!DB.recipes.length){ box.className='notice'; box.textContent='None yet'; return; }
+  box.className='';
+  box.innerHTML='';
+  DB.recipes.forEach((r,i)=>{
+    const row = el('div','flex'); row.style.justifyContent='space-between'; row.style.borderBottom='1px solid #223047'; row.style.padding='6px 0';
+    const left = el('div');
+    left.innerHTML = `<b>${r.name}</b> <span class="tag">${r.servings} serve(s)</span>`;
+    const use = el('button'); use.textContent='Add to plan'; use.onclick=()=> addRecipeToPlan(r);
+    const edit = el('button'); edit.textContent='Load to builder'; edit.onclick=()=>{ currentRecipe = JSON.parse(JSON.stringify(r)); renderRecipe(); };
+    const del = el('button'); del.textContent='Delete'; del.onclick=()=>{ if(confirm('Delete recipe?')){ DB.recipes.splice(i,1); renderRecipesList(); }};
+    row.append(left, el('div','flex',null)); row.lastChild.append(use, edit, del);
+    box.append(row);
+  });
+}
+
+function addRecipeToPlan(r){
+  const day = selectedDayIndex();
+  const meal = selectedMealIndex();
+  if(day<0 || meal<0){ alert('Select a cell in the planner first'); return; }
+  state.plan[day][meal].push({type:'recipe', data:r, serves:1});
+  renderPlan();
+}
+
+function selectedDayIndex(){
+  const cell = document.querySelector('td.active');
+  return cell? +cell.dataset.day : -1;
+}
+function selectedMealIndex(){
+  const cell = document.querySelector('td.active');
+  return cell? +cell.dataset.meal : -1;
+}
+
+function buildPlanTable(){
+  const tbl = $('#planTable');
+  tbl.innerHTML='';
+  const thead = el('thead');
+  const trh = el('tr'); trh.append(el('th','', 'Day'));
+  for(let m=0;m<state.mealsPerDay;m++) trh.append(el('th','', `Meal ${m+1}`));
+  trh.append(el('th','', 'Totals'));
+  thead.append(trh);
+  const tb = el('tbody');
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  for(let d=0; d<7; d++){
+    const tr = el('tr');
+    const dayName = days[(new Date(state.weekStart).getDay()+6+d)%7];
+    tr.append(el('td','', `${dayName}`));
+    for(let m=0;m<state.mealsPerDay;m++){
+      const td = el('td'); td.className='slot'; td.dataset.day=d; td.dataset.meal=m; td.onclick=()=>{ document.querySelectorAll('td.active').forEach(x=>x.classList.remove('active')); td.classList.add('active'); };
+      tr.append(td);
     }
-    return true;
+    tr.append(el('td','mono', ''));
+    tb.append(tr);
   }
+  tbl.append(thead,tb);
+}
 
-  function escapeRegExp(str){
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function renderPlan(){
+  $('#planHeading').textContent = state.planTitle || 'Weekly plan';
+  $('#planMeta').textContent = `${state.clientName?state.clientName+' · ':''}${state.diet} · ${state.kcal} kcal/day · ${state.mealsPerDay} meals/day`;
+  buildPlanTable();
+  const tbody = $('#planTable tbody');
+  for(let d=0; d<7; d++){
+    let dayTotals={k:0,p:0,c:0,f:0};
+    for(let m=0; m<state.mealsPerDay; m++){
+      const cell = tbody.rows[d].cells[m+1];
+      const items = state.plan[d][m];
+      cell.innerHTML='';
+      if(!items.length){ cell.append(el('div','muted','Empty')); continue; }
+      items.forEach((it,idx)=>{
+        if(it.type==='recipe'){
+          const r = it.data; const serves = it.serves||1;
+          const tot = nutritionOfRecipe(r);
+          const per = {k:tot.kcal/r.servings, p:tot.p/r.servings, c:tot.c/r.servings, f:tot.f/r.servings};
+          const chip = el('div','chip');
+          chip.innerHTML = `<b>${r.name}</b> <small>x ${serves} serve</small> <small>· ${Math.round(per.k*serves)} kcal</small>`;
+          const minus=el('button'); minus.textContent='−'; minus.onclick=()=>{ it.serves=Math.max(1,(it.serves||1)-1); renderPlan(); };
+          const plus=el('button'); plus.textContent='+'; plus.onclick=()=>{ it.serves=(it.serves||1)+1; renderPlan(); };
+          const del=el('button'); del.textContent='×'; del.onclick=()=>{ state.plan[d][m].splice(idx,1); renderPlan(); };
+          chip.append(minus, plus, del);
+          cell.append(chip);
+          dayTotals.k += per.k*serves; dayTotals.p += per.p*serves; dayTotals.c += per.c*serves; dayTotals.f += per.f*serves;
+        } else if(it.type==='food'){
+          const f = it.ref; const amt = it.amount; const scale = amt/f.per; const kcal=f.kcal*scale, p=f.p*scale, c=f.c*scale, ffat=f.f*scale;
+          const chip = el('div','chip');
+          chip.innerHTML = `<b>${f.name}</b> <small>${fmt(amt)} ${f.unit}</small> <small>· ${Math.round(kcal)} kcal</small>`;
+          const inp=el('input'); inp.type='number'; inp.value=amt; inp.style.width='90px'; inp.onchange=()=>{ it.amount=+inp.value; renderPlan(); };
+          const del=el('button'); del.textContent='×'; del.onclick=()=>{ state.plan[d][m].splice(idx,1); renderPlan(); };
+          chip.append(inp, del); cell.append(chip);
+          dayTotals.k += kcal; dayTotals.p += p; dayTotals.c += c; dayTotals.f += ffat;
+        }
+      });
+    }
+    const totalCell = tbody.rows[d].cells[state.mealsPerDay+1];
+    totalCell.textContent = `${Math.round(dayTotals.k)} kcal · P ${Math.round(dayTotals.p)} · C ${Math.round(dayTotals.c)} · F ${Math.round(dayTotals.f)}`;
   }
+  renderWeekTotals();
+}
 
-  function clearHighlights(){
-    // Remove active outline
-    hits.forEach(h => h.classList.remove('sb-active'));
-    // Unwrap all hits back to plain text
-    const nodes = document.querySelectorAll('mark.sb-hit');
-    nodes.forEach(mark => {
-      const text = document.createTextNode(mark.textContent);
-      mark.replaceWith(text);
-    });
-    hits = [];
-    activeIndex = -1;
-    setStatus(0, 0);
-    setControlsEnabled(false);
+function nutritionOfRecipe(r){
+  let tot={kcal:0,p:0,c:0,f:0};
+  r.items.forEach(it=>{ const scale = it.amount/it.ref.per; tot.kcal+=it.ref.kcal*scale; tot.p+=it.ref.p*scale; tot.c+=it.ref.c*scale; tot.f+=it.ref.f*scale; });
+  return tot;
+}
+
+function addRecipeToday(){
+  if(!currentRecipe.items.length){ alert('Add ingredients first'); return; }
+  const day = selectedDayIndex(); const meal = selectedMealIndex();
+  if(day<0 || meal<0){ alert('Select a cell in the planner first'); return; }
+  const copy = JSON.parse(JSON.stringify(currentRecipe));
+  state.plan[day][meal].push({type:'recipe', data:copy, serves:1});
+  renderPlan();
+}
+
+function addFoodToCell(food){
+  const day = selectedDayIndex(); const meal = selectedMealIndex();
+  if(day<0 || meal<0){ alert('Select a cell in the planner first'); return; }
+  state.plan[day][meal].push({type:'food', ref:food, amount:food.per});
+  renderPlan();
+}
+
+function autoFillDay(){
+  const day = selectedDayIndex(); if(day<0){ alert('Select a day cell'); return; }
+  // Simple auto fill: spread target kcal across meals using saved recipes if any, else foods
+  const perMealKcal = state.kcal/state.mealsPerDay;
+  for(let m=0;m<state.mealsPerDay;m++){
+    state.plan[day][m]=[];
+    if(DB.recipes.length){
+      const r = DB.recipes[(day+m)%DB.recipes.length];
+      const per = nutritionOfRecipe(r).kcal/r.servings;
+      const serves = Math.max(1, Math.round(perMealKcal/per));
+      state.plan[day][m].push({type:'recipe', data:r, serves});
+    } else {
+      const pick = DB.foods[(day+m)%DB.foods.length];
+      const scale = Math.max(1, Math.round(perMealKcal/pick.kcal));
+      state.plan[day][m].push({type:'food', ref:pick, amount:pick.per*scale});
+    }
   }
+  renderPlan();
+}
 
-  function setStatus(i, total){
-    if(total === 0){ status.textContent = '0 results'; return; }
-    status.textContent = `${i+1} of ${total}`;
+function clearDay(){
+  const day = selectedDayIndex(); if(day<0){ alert('Select a day cell'); return; }
+  for(let m=0;m<state.mealsPerDay;m++) state.plan[day][m]=[];
+  renderPlan();
+}
+
+function renderWeekTotals(){
+  let wk={k:0,p:0,c:0,f:0};
+  for(let d=0;d<7;d++){
+    for(let m=0;m<state.mealsPerDay;m++){
+      state.plan[d][m].forEach(it=>{
+        if(it.type==='recipe'){
+          const per = nutritionOfRecipe(it.data);
+          const k = per.kcal/it.data.servings, p=per.p/it.data.servings, c=per.c/it.data.servings, f=per.f/it.data.servings;
+          wk.k += k*(it.serves||1); wk.p += p*(it.serves||1); wk.c += c*(it.serves||1); wk.f += f*(it.serves||1);
+        } else {
+          const sc = it.amount/it.ref.per; wk.k += it.ref.kcal*sc; wk.p += it.ref.p*sc; wk.c += it.ref.c*sc; wk.f += it.ref.f*sc;
+        }
+      });
+    }
   }
+  const box = $('#weekTotals'); box.innerHTML='';
+  const targets = {k: state.kcal*7};
+  const items=[['Week kcal',Math.round(wk.k), `Target ${Math.round(targets.k)}`], ['Protein g',Math.round(wk.p), ''], ['Carbs g',Math.round(wk.c),''], ['Fat g',Math.round(wk.f),'']];
+  items.forEach(([t,v,sub])=>{ const k=el('div','kpi'); k.innerHTML=`<small>${t}</small><b>${v}</b><small class="muted">${sub}</small>`; box.append(k); });
+}
 
-  function setControlsEnabled(hasResults){
-    btnNext.disabled = !hasResults;
-    btnPrev.disabled = !hasResults;
-    btnClear.disabled = !hasResults;
+function buildShoppingList(){
+  const tally = new Map();
+  for(let d=0;d<7;d++){
+    for(let m=0;m<state.mealsPerDay;m++){
+      state.plan[d][m].forEach(it=>{
+        if(it.type==='recipe'){
+          it.data.items.forEach(ing=>{
+            const sc = (ing.amount/ing.ref.per) * (it.serves||1) / it.data.servings;
+            const key = ing.ref.name + '|' + ing.ref.unit;
+            const amt = ing.amount * (it.serves||1) / it.data.servings;
+            tally.set(key, (tally.get(key)||0) + amt);
+          });
+        } else if(it.type==='food'){
+          const key = it.ref.name + '|' + it.ref.unit;
+          tally.set(key, (tally.get(key)||0) + it.amount);
+        }
+      });
+    }
   }
+  if(!tally.size){ $('#shoppingList').textContent='No items yet'; return; }
+  const lines = [];
+  tally.forEach((amt,key)=>{
+    const [name,unit]=key.split('|');
+    lines.push(`${name}: ${fmt(Math.round(amt))} ${unit}`);
+  });
+  lines.sort();
+  $('#shoppingList').innerHTML = '<pre class="mono">'+lines.join('\n')+'</pre>';
+}
 
-  function highlightMatches(query){
-    if(!query) return 0;
-    const qLower = query.toLowerCase();
-    const walker = document
+function fmt(n){
+  return (Math.round(n*10)/10).toString();
+}
+
+// ---------- Add custom food ----------
+$('#addFoodBtn').onclick = ()=>{
+  const name = prompt('Food name'); if(!name) return;
+  const unit = prompt('Unit (g, ml, item, scoop)', 'g')||'g';
+  const per = +(prompt('Per how many '+unit+' are these values for?', unit==='g'?100:1)|| (unit==='g'?100:1));
+  const kcal = +prompt('kcal per that amount?', '100')||0;
+  const p = +prompt('Protein g?', '0')||0;
+  const c = +prompt('Carbs g?', '0')||0;
+  const f = +prompt('Fat g?', '0')||0;
+  DB.foods.unshift({name,unit,per,kcal,p,c,f});
+  renderFoodList();
+};
+
+// ---------- Save/Load/Export ----------
+function snapshot(){
+  return {
+    state, DB
+  };
+}
+function restore(snap){
+  if(!snap) return;
+  Object.assign(state, snap.state);
+  DB.foods = snap.DB.foods||DB.foods;
+  DB.recipes = snap.DB.recipes||[];
+  // rebind dates and ensure plan size
+  $('#mealsPerDay').value = state.mealsPerDay;
+  if(!state.plan || state.plan.length!==7 || state.plan[0].length!==state.mealsPerDay){
+    state.plan = initEmptyPlan(state.mealsPerDay);
+  }
+  bindFormToState('from');
+  renderFoodList(); renderRecipesList(); renderPlan();
+}
+
+$('#saveBtn').onclick=()=>{ localStorage.setItem('mealplan_save', JSON.stringify(snapshot())); alert('Saved to this device'); };
+$('#loadBtn').onclick=()=>{ const raw = localStorage.getItem('mealplan_save'); if(!raw){ alert('Nothing saved'); return;} restore(JSON.parse(raw)); };
+$('#exportBtn').onclick=()=>{
+  const blob = new Blob([JSON.stringify(snapshot(),null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'meal-plan.json'; a.click(); URL.revokeObjectURL(a.href);
+};
+$('#importBtn').onclick=()=> $('#importFile').click();
+$('#importFile').onchange = e=>{
+  const f = e.target.files[0]; if(!f) return; const rd = new FileReader();
+  rd.onload=()=>{ try{ restore(JSON.parse(rd.result)); }catch(err){ alert('Invalid file'); } };
+  rd.readAsText(f);
+};
+$('#printBtn').onclick=()=> window.print();
+$('#resetBtn').onclick=()=>{ if(confirm('Clear everything?')){ Object.assign(state,{clientName:'', planTitle:'', kcal:2000, mealsPerDay:4, pPct:30, cPct:40, fPct:30, diet:'balanced', allergens:'', notes:'', weekStart:new Date().toISOString().slice(0,10), plan:initEmptyPlan(4)}); DB.recipes=[]; bindFormToState('from'); renderFoodList(); renderRecipesList(); renderPlan(); }};
+
+// ---------- Bindings ----------
+function bindFormToState(dir){
+  if(dir==='from'){
+    $('#clientName').value=state.clientName; $('#planTitle').value=state.planTitle; $('#kcalInput').value=state.kcal; $('#mealsPerDay').value=state.mealsPerDay; $('#pPct').value=state.pPct; $('#cPct').value=state.cPct; $('#fPct').value=state.fPct; $('#diet').value=state.diet; $('#allergens').value=state.allergens; $('#notes').value=state.notes; $('#weekStart').value=state.weekStart;
+    computeTargets();
+  } else {
+    state.clientName = $('#clientName').value; state.planTitle = $('#planTitle').value; state.kcal= +$('#kcalInput').value; state.mealsPerDay= +$('#mealsPerDay').value; state.pPct= +$('#pPct').value; state.cPct= +$('#cPct').value; state.fPct= +$('#fPct').value; state.diet=$('#diet').value; state.allergens=$('#allergens').value; state.notes=$('#notes').value; state.weekStart=$('#weekStart').value;
+  }
+}
+['clientName','planTitle','kcalInput','mealsPerDay','pPct','cPct','fPct','diet','allergens','notes','weekStart'].forEach(id=>{
+  $("#"+id).addEventListener('input', ()=>{ bindFormToState('to'); if(id!=='notes') computeTargets(); if(id==='mealsPerDay'){ state.plan = initEmptyPlan(state.mealsPerDay); renderPlan(); } else { renderPlan(); } });
+});
+
+$('#foodSearch').addEventListener('input', renderFoodList);
+$('#saveRecipeBtn').onclick = saveCurrentRecipe;
+$('#clearRecipeBtn').onclick = ()=>{ currentRecipe = {name:'', servings:2, items:[]}; renderRecipe(); };
+$('#addToPlanBtn').onclick = addRecipeToday;
+$('#autoFillBtn').onclick = autoFillDay;
+$('#clearDayBtn').onclick = clearDay;
+$('#shoppingBtn').onclick = ()=>{ buildShoppingList(); $('#shoppingPanel').style.display='block'; document.getElementById('shoppingPanel').scrollIntoView({behavior:'smooth'}); };
+$('#copyShopBtn').onclick = ()=>{ const pre = $('#shoppingList').innerText; navigator.clipboard.writeText(pre).then(()=>alert('Copied')); };
+
+// Allow clicking a food to add directly to selected cell if a planner cell is active
+$('#foodList').addEventListener('click', e=>{
+  const btn = e.target.closest('button');
+  if(btn){ const idx = Array.from($('#foodList').children).indexOf(btn.parentElement); const foods = DB.foods.filter(f=> f.name.toLowerCase().includes($('#foodSearch').value.toLowerCase().trim())); addFoodToCell(foods[idx]); }
+});
+
+// ---------- Init ----------
+renderFoodList(); renderRecipesList(); bindFormToState('from'); renderPlan();
+
+</script>
+</body>
+</html>
